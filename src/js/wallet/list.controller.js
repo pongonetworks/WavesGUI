@@ -9,7 +9,7 @@
 
         function sendCommandEvent(event, currency) {
             var assetWallet = findWalletByCurrency(currency);
-            var wavesWallet = findWalletByCurrency(Currency.WAVES);
+            var wavesWallet = findWalletByCurrency(Currency.TN);
 
             $scope.$broadcast(event, {
                 assetBalance: assetWallet.balance,
@@ -25,36 +25,8 @@
 
         ctrl.wallets = [
             {
-                balance: new Money(0, Currency.USD),
-                depositWith: Currency.USD
-            },
-            {
-                balance: new Money(0, Currency.EUR),
-                depositWith: Currency.EUR
-            },
-            {
-                balance: new Money(0, Currency.BTC),
-                depositWith: Currency.BTC
-            },
-            {
-                balance: new Money(0, Currency.WAVES),
-                depositWith: Currency.BTC
-            },
-            {
-                balance: new Money(0, Currency.ETH),
-                depositWith: Currency.ETH
-            },
-            {
-                balance: new Money(0, Currency.LTC),
-                depositWith: Currency.LTC
-            },
-            {
-                balance: new Money(0, Currency.ZEC),
-                depositWith: Currency.ZEC
-            },
-            {
-                balance: new Money(0, Currency.WTRY),
-                depositWith: Currency.WTRY
+                balance: new Money(0, Currency.TN),
+                depositWith: Currency.TN
             }
         ];
 
@@ -82,35 +54,35 @@
             var id = wallet.balance.currency.id,
                 type;
 
-            if (id === Currency.BTC.id ||
-                id === Currency.ETH.id ||
-                id === Currency.WAVES.id ||
-                id === Currency.LTC.id ||
-                id === Currency.ZEC.id
-            ) {
-                type = 'crypto';
-            } else if (id === Currency.EUR.id || id === Currency.USD.id) {
-                type = 'fiat';
-            } else if (id === Currency.WTRY.id) {
-                dialogService.open('#digilira-dialog');
-            } else {
-                throw new Error('Add an option here!');
-            }
+            // if (id === Currency.BTC.id ||
+            //     id === Currency.ETH.id ||
+            //     id === Currency.WAVES.id ||
+            //     id === Currency.LTC.id ||
+            //     id === Currency.ZEC.id
+            // ) {
+            //     type = 'crypto';
+            // } else if (id === Currency.EUR.id || id === Currency.USD.id) {
+            //     type = 'fiat';
+            // } else if (id === Currency.WTRY.id) {
+            //     dialogService.open('#digilira-dialog');
+            // } else {
+            //     throw new Error('Add an option here!');
+            // }
 
             sendCommandEvent(events.WALLET_WITHDRAW + type, wallet.balance.currency);
         }
 
         function deposit (wallet) {
-            if (wallet.balance.currency === Currency.WAVES) {
-                depositFromCard(wallet.balance.currency);
-            } else if (wallet.balance.currency === Currency.WTRY) {
-                dialogService.open('#digilira-dialog');
-            } else {
-                $scope.$broadcast(events.WALLET_DEPOSIT + wallet.balance.currency.id, {
-                    assetBalance: wallet.balance,
-                    depositWith: wallet.depositWith
-                });
-            }
+            // if (wallet.balance.currency === Currency.TN) {
+            //     depositFromCard(wallet.balance.currency);
+            // } else if (wallet.balance.currency === Currency.WTRY) {
+            //     dialogService.open('#digilira-dialog');
+            // } else {
+            //     $scope.$broadcast(events.WALLET_DEPOSIT + wallet.balance.currency.id, {
+            //         assetBalance: wallet.balance,
+            //         depositWith: wallet.depositWith
+            //     });
+            // }
         }
 
         function depositFromCard (currency) {
@@ -134,8 +106,8 @@
         function refreshWallets() {
             apiService.address.balance(applicationContext.account.address)
                 .then(function (response) {
-                    var wavesWallet = findWalletByCurrency(Currency.WAVES);
-                    wavesWallet.balance = Money.fromCoins(response.balance, Currency.WAVES);
+                    var wavesWallet = findWalletByCurrency(Currency.TN);
+                    wavesWallet.balance = Money.fromCoins(response.balance, Currency.TN);
                 });
 
             apiService.assets.balance(applicationContext.account.address).then(function (response) {
@@ -172,15 +144,15 @@
 
         // Assets ID substitution for testnet
         function patchCurrencyIdsForTestnet() {
-            if ($scope.isTestnet()) {
-                Currency.EUR.id = '2xnE3EdpqXtFgCP156qt1AbyjpqdZ5jGjWo3CwTawcux';
-                Currency.USD.id = 'HyFJ3rrq5m7FxdkWtQXkZrDat1F7LjVVGfpSkUuEXQHj';
-                Currency.BTC.id = 'Fmg13HEHJHuZYbtJq8Da8wifJENq8uBxDuWoP9pVe2Qe';
-                Currency.ETH.id = '3fVdr1oiX39uS82ZGUPnu7atNQtFHZfPnseRDUcDxrhp';
-                Currency.LTC.id = 'NO_ID_YET'; // FIXME
-                Currency.ZEC.id = 'NO_ID_YET'; // FIXME
-                Currency.invalidateCache();
-            }
+            // if ($scope.isTestnet()) {
+            //     Currency.EUR.id = '2xnE3EdpqXtFgCP156qt1AbyjpqdZ5jGjWo3CwTawcux';
+            //     Currency.USD.id = 'HyFJ3rrq5m7FxdkWtQXkZrDat1F7LjVVGfpSkUuEXQHj';
+            //     Currency.BTC.id = 'Fmg13HEHJHuZYbtJq8Da8wifJENq8uBxDuWoP9pVe2Qe';
+            //     Currency.ETH.id = '3fVdr1oiX39uS82ZGUPnu7atNQtFHZfPnseRDUcDxrhp';
+            //     Currency.LTC.id = 'NO_ID_YET'; // FIXME
+            //     Currency.ZEC.id = 'NO_ID_YET'; // FIXME
+            //     Currency.invalidateCache();
+            // }
         }
     }
 

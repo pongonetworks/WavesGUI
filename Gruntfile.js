@@ -98,10 +98,10 @@ module.exports = function (grunt) {
                 mainnet: {
                     name: 'mainnet',
                     code: 'W',
-                    server: 'https://nodes.wavesnodes.com',
+                    server: 'https://privatenode.blackturtle.eu',
                     coinomat: 'https://coinomat.com',
-                    matcher: 'https://matcher.wavesnodes.com',
-                    datafeed: 'https://marketdata.wavesplatform.com'
+                    matcher: 'https://privatematcher.blackturtle.eu',
+                    datafeed: 'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT'
                 },
                 devnet: {
                     name: 'devnet',

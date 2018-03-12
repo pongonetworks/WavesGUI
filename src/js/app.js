@@ -41,11 +41,11 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
         }));
     $provide.constant(applicationSettings,
         angular.extend(applicationSettings, {
-            CLIENT_VERSION: '0.4.1a',
-            NODE_ADDRESS: 'https://testnet1.wavesnodes.com',
-            COINOMAT_ADDRESS: 'https://test.coinomat.com',
-            MATCHER_ADDRESS: 'https://testnet1.wavesnodes.com',
-            DATAFEED_ADDRESS: 'https://marketdata.wavesplatform.com'
+            CLIENT_VERSION: '0.5.1TN',
+            NODE_ADDRESS: 'https://privatenode.blackturtle.eu',
+            COINOMAT_ADDRESS: 'https://coinomat.com',
+            MATCHER_ADDRESS: 'https://privatematcher.blackturtle.eu',
+            DATAFEED_ADDRESS: 'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT'
         }));
 
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|local|data|file|chrome-extension):/);
@@ -54,7 +54,7 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
         'self',
         'https://test.coinomat.com/api/**',
         'https://coinomat.com/api/**',
-        'https://marketdata.wavesplatform.com/**'
+        'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT/**'
     ]);
 
     // Globally disables all ARIA warnings.
@@ -86,7 +86,7 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
         'optionally starting with \'1W\'');
 
     $validatorProvider.addMethod('decimal', function (value, element, maxDigits) {
-        maxDigits = angular.isNumber(maxDigits) ? maxDigits : Currency.WAVES.precision;
+        maxDigits = angular.isNumber(maxDigits) ? maxDigits : Currency.TN.precision;
         var regex = new RegExp('^(?:-?\\d+)?(?:\\.\\d{0,' + maxDigits + '})?$');
         return this.optional(element) || regex.test(value);
     }, 'Amount is expected with a dot (.) as a decimal separator with no more than {0} fraction digits');

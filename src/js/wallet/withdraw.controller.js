@@ -8,154 +8,154 @@
                                             coinomatService, transactionBroadcast, notificationService,
                                             apiService, formattingService, assetService, applicationContext) {
 
-        var ctrl = this;
-        var type = $element.data('type');
-
-        var minimumFee = new Money(constants.MINIMUM_TRANSACTION_FEE, Currency.WAVES);
-        var notPermittedBitcoinAddresses = {};
-
-        ctrl.broadcast = new transactionBroadcast.instance(apiService.assets.transfer,
-            function (transaction) {
-                var amount = Money.fromCoins(transaction.amount, ctrl.assetBalance.currency);
-                var address = transaction.recipient;
-                var displayMessage = 'Sent ' + amount.formatAmount(true) + ' of ' +
-                    ctrl.assetBalance.currency.displayName +
-                    '<br/>Gateway ' + address.substr(0,15) + '...<br/>Date: ' +
-                    formattingService.formatTimestamp(transaction.timestamp);
-                notificationService.notice(displayMessage);
-            });
+        // var ctrl = this;
+        // var type = $element.data('type');
+        //
+        // var minimumFee = new Money(constants.MINIMUM_TRANSACTION_FEE, Currency.TN);
+        // var notPermittedBitcoinAddresses = {};
+        //
+        // ctrl.broadcast = new transactionBroadcast.instance(apiService.assets.transfer,
+        //     function (transaction) {
+        //         var amount = Money.fromCoins(transaction.amount, ctrl.assetBalance.currency);
+        //         var address = transaction.recipient;
+        //         var displayMessage = 'Sent ' + amount.formatAmount(true) + ' of ' +
+        //             ctrl.assetBalance.currency.displayName +
+        //             '<br/>Gateway ' + address.substr(0,15) + '...<br/>Date: ' +
+        //             formattingService.formatTimestamp(transaction.timestamp);
+        //         notificationService.notice(displayMessage);
+        //     });
 
         ctrl.autocomplete = autocomplete;
 
-        ctrl.validationOptions = {
-            onfocusout: function (element) {
-                return !(element.name in ['withdrawFee']); // FIXME
-            },
-            rules: {
-                withdrawAddress: {
-                    required: true
-                },
-                withdrawAmount: {
-                    required: true,
-                    decimal: 8,
-                    min: 0,
-                    max: constants.JAVA_MAX_LONG
-                },
-                withdrawFee: {
-                    required: true,
-                    decimal: Currency.WAVES.precision,
-                    min: minimumFee.toTokens()
-                },
-                withdrawTotal: {
-                    required: true,
-                    decimal: 8,
-                    min: 0,
-                    max: constants.JAVA_MAX_LONG
-                }
-            },
-            messages: {
-                withdrawAddress: {
-                    required: 'Bitcoin address is required'
-                },
-                withdrawAmount: {
-                    required: 'Amount to withdraw is required'
-                },
-                withdrawFee: {
-                    required: 'Gateway transaction fee is required',
-                    decimal: 'Transaction fee must be with no more than ' +
-                        minimumFee.currency.precision + ' digits after the decimal point (.)',
-                    min: 'Transaction fee is too small. It should be greater or equal to ' +
-                        minimumFee.formatAmount(true)
-                },
-                withdrawTotal: {
-                    required: 'Total amount is required'
-                }
-            }
-        };
+        // ctrl.validationOptions = {
+        //     onfocusout: function (element) {
+        //         return !(element.name in ['withdrawFee']); // FIXME
+        //     },
+        //     rules: {
+        //         withdrawAddress: {
+        //             required: true
+        //         },
+        //         withdrawAmount: {
+        //             required: true,
+        //             decimal: 8,
+        //             min: 0,
+        //             max: constants.JAVA_MAX_LONG
+        //         },
+        //         withdrawFee: {
+        //             required: true,
+        //             decimal: Currency.TN.precision,
+        //             min: minimumFee.toTokens()
+        //         },
+        //         withdrawTotal: {
+        //             required: true,
+        //             decimal: 8,
+        //             min: 0,
+        //             max: constants.JAVA_MAX_LONG
+        //         }
+        //     },
+        //     messages: {
+        //         withdrawAddress: {
+        //             required: 'Bitcoin address is required'
+        //         },
+        //         withdrawAmount: {
+        //             required: 'Amount to withdraw is required'
+        //         },
+        //         withdrawFee: {
+        //             required: 'Gateway transaction fee is required',
+        //             decimal: 'Transaction fee must be with no more than ' +
+        //                 minimumFee.currency.precision + ' digits after the decimal point (.)',
+        //             min: 'Transaction fee is too small. It should be greater or equal to ' +
+        //                 minimumFee.formatAmount(true)
+        //         },
+        //         withdrawTotal: {
+        //             required: 'Total amount is required'
+        //         }
+        //     }
+        // };
 
-        ctrl.confirm = {
-            amount: {},
-            fee: {},
-            gatewayAddress: '',
-            address: ''
-        };
+        // ctrl.confirm = {
+        //     amount: {},
+        //     fee: {},
+        //     gatewayAddress: '',
+        //     address: ''
+        // };
+        //
+        // ctrl.confirmWithdraw = confirmWithdraw;
+        // ctrl.refreshAmount = refreshAmount;
+        // ctrl.refreshTotal = refreshTotal;
+        // ctrl.broadcastTransaction = broadcastTransaction;
+        // ctrl.gatewayEmail = 'support@coinomat.com';
+        //
+        // resetForm();
 
-        ctrl.confirmWithdraw = confirmWithdraw;
-        ctrl.refreshAmount = refreshAmount;
-        ctrl.refreshTotal = refreshTotal;
-        ctrl.broadcastTransaction = broadcastTransaction;
-        ctrl.gatewayEmail = 'support@coinomat.com';
-
-        resetForm();
-
-        $scope.$on(events.WALLET_WITHDRAW + type, function (event, eventData) {
-            ctrl.assetBalance = eventData.assetBalance;
-            ctrl.wavesBalance = eventData.wavesBalance;
-
-            if (ctrl.assetBalance.currency === Currency.BTC ||
-                ctrl.assetBalance.currency === Currency.ETH ||
-                ctrl.assetBalance.currency === Currency.LTC ||
-                ctrl.assetBalance.currency === Currency.ZEC
-            ) {
-                withdrawCrypto();
-            } else if (ctrl.assetBalance.currency === Currency.EUR) {
-                withdrawEUR();
-            } else if (ctrl.assetBalance.currency === Currency.USD) {
-                withdrawUSD();
-            } else {
-                $scope.home.featureUnderDevelopment();
-            }
-        });
+        // $scope.$on(events.WALLET_WITHDRAW + type, function (event, eventData) {
+        //     ctrl.assetBalance = eventData.assetBalance;
+        //     ctrl.wavesBalance = eventData.wavesBalance;
+        //
+        //     if (ctrl.assetBalance.currency === Currency.BTC ||
+        //         ctrl.assetBalance.currency === Currency.ETH ||
+        //         ctrl.assetBalance.currency === Currency.LTC ||
+        //         ctrl.assetBalance.currency === Currency.ZEC
+        //     ) {
+        //         withdrawCrypto();
+        //     } else if (ctrl.assetBalance.currency === Currency.EUR) {
+        //         withdrawEUR();
+        //     } else if (ctrl.assetBalance.currency === Currency.USD) {
+        //         withdrawUSD();
+        //     } else {
+        //         $scope.home.featureUnderDevelopment();
+        //     }
+        // });
 
         function withdrawCrypto() {
-            coinomatService.getWithdrawRate(ctrl.assetBalance.currency)
-                .then(function (response) {
-                    /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-                    var minimumPayment = Money.fromCoins(1, ctrl.assetBalance.currency);
-                    minimumPayment = Money.fromTokens(Math.max(minimumPayment.toTokens(), response.in_min),
-                        ctrl.assetBalance.currency);
-                    var maximumPayment = Money.fromTokens(Math.min(ctrl.assetBalance.toTokens(),
-                        response.in_max), ctrl.assetBalance.currency);
-                    ctrl.sourceCurrency = ctrl.assetBalance.currency.displayName;
-                    ctrl.isEthereum = (ctrl.assetBalance.currency === Currency.ETH);
-                    ctrl.exchangeRate = response.xrate;
-                    ctrl.feeIn = response.fee_in;
-                    ctrl.feeOut = response.fee_out;
-                    ctrl.targetCurrency = response.to_txt;
-                    ctrl.total = response.in_def;
-                    ctrl.minimumPayment = minimumPayment;
-                    /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-                    ctrl.validationOptions.rules.withdrawAmount.decimal = ctrl.assetBalance.currency.precision;
-                    ctrl.validationOptions.rules.withdrawAmount.max = maximumPayment.toTokens();
-                    ctrl.validationOptions.rules.withdrawAmount.min = minimumPayment.toTokens();
-                    ctrl.validationOptions.messages.withdrawAmount.decimal = 'The amount to withdraw must be ' +
-                        'a number with no more than ' + minimumPayment.currency.precision +
-                        ' digits after the decimal point (.)';
-                    ctrl.validationOptions.messages.withdrawAmount.min = 'Withdraw amount is too small. ' +
-                        'It should be greater or equal to ' + minimumPayment.formatAmount();
-                    ctrl.validationOptions.messages.withdrawAmount.max = 'Withdraw amount is too big. ' +
-                        'It should be less or equal to ' + maximumPayment.formatAmount();
-
-                    refreshAmount();
-
-                    dialogService.open('#withdraw-crypto-dialog');
-                }).catch(function (exception) {
-                if (exception && exception.data && exception.data.error) {
-                    notificationService.error(exception.error);
-                } else {
-                    notificationService.error(DEFAULT_ERROR_MESSAGE);
-                }
-            }).then(function () {
-                return coinomatService.getDepositDetails(Currency.BTC, Currency.BTC,
-                    applicationContext.account.address);
-            }).then(function (depositDetails) {
-                notPermittedBitcoinAddresses[depositDetails.address] = 1;
-
-                return coinomatService.getDepositDetails(Currency.BTC, Currency.WAVES,
-                    applicationContext.account.address);
-            }).then(function (depositDetails) {
-                notPermittedBitcoinAddresses[depositDetails.address] = 1;
-            });
+            // coinomatService.getWithdrawRate(ctrl.assetBalance.currency)
+            //     .then(function (response) {
+            //         /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+            //         var minimumPayment = Money.fromCoins(1, ctrl.assetBalance.currency);
+            //         minimumPayment = Money.fromTokens(Math.max(minimumPayment.toTokens(), response.in_min),
+            //             ctrl.assetBalance.currency);
+            //         var maximumPayment = Money.fromTokens(Math.min(ctrl.assetBalance.toTokens(),
+            //             response.in_max), ctrl.assetBalance.currency);
+            //         ctrl.sourceCurrency = ctrl.assetBalance.currency.displayName;
+            //         ctrl.isEthereum = (ctrl.assetBalance.currency === Currency.ETH);
+            //         ctrl.exchangeRate = response.xrate;
+            //         ctrl.feeIn = response.fee_in;
+            //         ctrl.feeOut = response.fee_out;
+            //         ctrl.targetCurrency = response.to_txt;
+            //         ctrl.total = response.in_def;
+            //         ctrl.minimumPayment = minimumPayment;
+            //         /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+            //         ctrl.validationOptions.rules.withdrawAmount.decimal = ctrl.assetBalance.currency.precision;
+            //         ctrl.validationOptions.rules.withdrawAmount.max = maximumPayment.toTokens();
+            //         ctrl.validationOptions.rules.withdrawAmount.min = minimumPayment.toTokens();
+            //         ctrl.validationOptions.messages.withdrawAmount.decimal = 'The amount to withdraw must be ' +
+            //             'a number with no more than ' + minimumPayment.currency.precision +
+            //             ' digits after the decimal point (.)';
+            //         ctrl.validationOptions.messages.withdrawAmount.min = 'Withdraw amount is too small. ' +
+            //             'It should be greater or equal to ' + minimumPayment.formatAmount();
+            //         ctrl.validationOptions.messages.withdrawAmount.max = 'Withdraw amount is too big. ' +
+            //             'It should be less or equal to ' + maximumPayment.formatAmount();
+            //
+            //         refreshAmount();
+            //
+            //         dialogService.open('#withdraw-crypto-dialog');
+            //     }).catch(function (exception) {
+            //     if (exception && exception.data && exception.data.error) {
+            //         notificationService.error(exception.error);
+            //     } else {
+            //         notificationService.error(DEFAULT_ERROR_MESSAGE);
+            //     }
+            // }).then(function () {
+            //     return coinomatService.getDepositDetails(Currency.BTC, Currency.BTC,
+            //         applicationContext.account.address);
+            // }).then(function (depositDetails) {
+            //     notPermittedBitcoinAddresses[depositDetails.address] = 1;
+            //
+            //     return coinomatService.getDepositDetails(Currency.BTC, Currency.WAVES,
+            //         applicationContext.account.address);
+            // }).then(function (depositDetails) {
+            //     notPermittedBitcoinAddresses[depositDetails.address] = 1;
+            // });
         }
 
         function withdrawEUR() {

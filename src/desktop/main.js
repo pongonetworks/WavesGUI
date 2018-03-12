@@ -18,7 +18,7 @@ function createWindow () {
         minWidth: 800,
         minHeight: 600,
         center: true,
-        title: 'Waves Lite Client',
+        title: 'TurtleNode forked client',
         webPreferences: {
             nodeIntegration: false,
             defaultEncoding: 'UTF-8'

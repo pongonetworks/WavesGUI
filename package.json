@@ -4,7 +4,7 @@
   "description": "A lite client for the Waves platform",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wavesplatform/WavesGUI.git"
+    "url": "https://github.com/BlackTurtle123/WavesGUI.git"
   },
   "license": "Apache-2.0",
   "engines": {

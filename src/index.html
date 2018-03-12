@@ -45,10 +45,8 @@
 <div id="lockscreen" class="userBG" ng-controller="accountsController as accounts" ng-switch-when="accounts-screen" ng-cloak>
   <div class="banner">
     <div class="banner-content">
-      <img src="img/warning_icon.svg"/> Google is shutting down its Chrome Web Store.
-      Save your secret phrase (SEED) and start using our new desktop application.
-      Download it from the official Waves site <a href="https://wavesplatform.com" target="_blank">wavesplatform.com</a>,
-      or use the web client <a href="https://beta.wavesplatform.com" target="_blank">beta.wavesplatform.com</a>
+      <img src="img/warning_icon.svg"/> This is a Waves fork. Powered by TurtleNode.
+
     </div>
   </div>
   <table id="lockscreenTable">
@@ -428,7 +426,7 @@
                 <table>
                   <div class="balanceAmt">
                     <div ng-if="!send.feeAndTransferAssetsAreTheSame"><p>Asset balance: </p><span class="balancewaves">{{send.assetBalance | moneyLong:true}}</span><br/></div>
-                    <p>Waves balance: </p><span class="balancewaves">{{send.feeAssetBalance | moneyLong:true}}</span>
+                    <p>TurtleNode balance: </p><span class="balancewaves">{{send.feeAssetBalance | moneyLong:true}}</span>
                   </div>
                   <thead>
                   <tr>

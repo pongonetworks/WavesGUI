@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var prefix = 'Waves Lite Client';
+    var prefix = 'TurtleNode fork client';
 
     angular
         .module('app.shared')

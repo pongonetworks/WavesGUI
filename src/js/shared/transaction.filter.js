@@ -62,8 +62,8 @@
         }
 
         function processPaymentTransaction(transaction) {
-            transaction.formatted.amount = Money.fromCoins(transaction.amount, Currency.WAVES).formatAmount();
-            transaction.formatted.asset = Currency.WAVES.displayName;
+            transaction.formatted.amount = Money.fromCoins(transaction.amount, Currency.TN).formatAmount();
+            transaction.formatted.asset = Currency.TN.displayName;
         }
 
         function processAssetIssueTransaction(transaction) {
@@ -77,7 +77,7 @@
         }
 
         function processCreateAliasTransaction(transaction) {
-            transaction.formatted.asset = Currency.WAVES.displayName;
+            transaction.formatted.asset = Currency.TN.displayName;
         }
 
         function processAssetTransferTransaction(transaction) {
@@ -88,7 +88,7 @@
                     currency = asset.currency;
                 }
             } else {
-                currency = Currency.WAVES;
+                currency = Currency.TN;
             }
 
             if (!currency) {
@@ -110,8 +110,8 @@
         }
 
         function processStartLeasingTransaction(transaction) {
-            transaction.formatted.amount = Money.fromCoins(transaction.amount, Currency.WAVES).formatAmount();
-            transaction.formatted.asset = Currency.WAVES.displayName;
+            transaction.formatted.amount = Money.fromCoins(transaction.amount, Currency.TN).formatAmount();
+            transaction.formatted.asset = Currency.TN.displayName;
         }
 
         function processCancelLeasingTransaction(transaction) {
@@ -136,7 +136,7 @@
             }
 
             transaction.formatted.type = type;
-            transaction.formatted.fee = Money.fromCoins(totalFee, Currency.WAVES).formatAmount(true);
+            transaction.formatted.fee = Money.fromCoins(totalFee, Currency.TN).formatAmount(true);
 
             var currency;
             if (assetId) {
@@ -145,7 +145,7 @@
                     currency = asset.currency;
                 }
             } else {
-                currency = Currency.WAVES;
+                currency = Currency.TN;
             }
 
             if (currency) {
@@ -155,7 +155,7 @@
         }
 
         function formatFee(transaction) {
-            var currency = Currency.WAVES;
+            var currency = Currency.TN;
             var assetId = transaction.feeAsset;
             if (assetId) {
                 var asset = applicationContext.cache.assets[assetId];
@@ -168,7 +168,7 @@
         }
 
         function getFeeAsset(transaction) {
-            var currency = Currency.WAVES;
+            var currency = Currency.TN;
             var assetId = transaction.feeAsset;
             if (assetId) {
                 var asset = applicationContext.cache.assets[assetId];
