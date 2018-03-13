@@ -518,7 +518,7 @@ module.exports = function (grunt) {
         },
         "github-release": {
             options: {
-                repository : "wavesplatform/WavesGUI",
+                repository : "BlackTurtle123/WavesGUI",
                 auth: {
                     user: process.env["GITHUB_ACCESS_TOKEN"],
                     password: ''

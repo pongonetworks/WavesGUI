@@ -6,7 +6,7 @@
 
         var mapping = {};
         mapping[Currency.TN.displayName] = {
-            image: 'wB-bg-TN.svg',
+            image: 'logo_Turtle.svg',
             displayName: Currency.TN.displayName
         };
 

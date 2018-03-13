@@ -19,7 +19,7 @@
 <html ng-app="app" ng-csp>
 <head>
   <meta charset="utf-8">
-  <title>Waves Lite Client</title>
+  <title>TurtleNode fork client</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- CSS BEGIN -->
   <link rel="stylesheet" href="../bower_components/angular/angular-csp.css">
@@ -131,7 +131,7 @@
             <div class="plate-warning">
               <p class="dialog-text" style="font-weight: bold;">Treat your SEED (backup phrase) with care!</p>
               <p class="dialog-text">Only SEED can provide access to your wallet.</p>
-              <p class="dialog-text">1. Don't put your SEED anywhere except official<br/>Waves clients (look at the site domain).</p>
+              <p class="dialog-text">1. Don't put your SEED anywhere except official<br/>TurtleNode clients (look at the site domain).</p>
               <p class="dialog-text">If someone else accesses it you will lose your funds.</p>
               <p class="dialog-text">2. Store your SEED safely, it is the only<br/>way to restore your wallet.</p>
             </div>
@@ -230,8 +230,8 @@
     <p class="dialog-text">Follow our social media channels to stay up to date with the latest improvements and developments.</p>
     <div class="modal-media">
       <a href="https://blog.wavesplatform.com/" target="_blank"><img class="modal-media-img" src="img/blog_icon.svg" /></a>
-      <a href="https://twitter.com/wavesplatform" target="_blank"><img class="modal-media-img" src="img/twitter_icon.svg" /></a>
-      <a href="https://www.facebook.com/wavesplatform" target="_blank"><img class="modal-media-img" src="img/facebook_icon.svg" /></a>
+      <a href="https://twitter.com/__Black_Turtle_" target="_blank"><img class="modal-media-img" src="img/twitter_icon.svg" /></a>
+      <a href="https://www.facebook.com/BlackTurtleWavesPool/" target="_blank"><img class="modal-media-img" src="img/facebook_icon.svg" /></a>
       <a href="http://slack.wavesplatform.com/" target="_blank"><img class="modal-media-img" src="img/slack_icon.svg" /></a>
       <a href="https://www.reddit.com/r/Wavesplatform/" target="_blank"><img class="modal-media-img" src="img/reddit_icon.svg" /></a>
       <a href="https://vk.com/wavesplatform" target="_blank"><img id="icon-blog" class="modal-media-img" src="img/vk_icon.svg" /></a>
@@ -271,7 +271,7 @@
           <div class="plate-warning">
             <p class="dialog-text" style="font-weight: bold;">Treat your SEED (backup phrase) with care!</p>
             <p class="dialog-text">Only SEED can provide access to your wallet.</p>
-            <p class="dialog-text">1. Don't put your SEED anywhere except official<br/>Waves clients (look at the site domain).</p>
+            <p class="dialog-text">1. Don't put your SEED anywhere except official<br/>TurtleNode clients (look at the site domain).</p>
             <p class="dialog-text">If someone else accesses it you will lose your funds.</p>
             <p class="dialog-text">2. Store your SEED safely, it is the only<br/>way to restore your wallet.</p>
           </div>
@@ -315,7 +315,7 @@
                 <td><input class="wInput form-control" name="aliasName" type="text" placeholder="Symbolic name" ng-model="create.alias"/></td>
               </tr>
               <tr>
-                <td>Waves fee</td>
+                <td>TN fee</td>
                 <td>{{::create.fee.formatAmount(true)}} {{::create.fee.currency.displayName}}</td>
               </tr>
               </tbody>
@@ -1236,7 +1236,8 @@
         <!-- COMMUNITY TAB -->
         <div id="mBB-community" class="mBB-content" ng-switch-when="community" ng-controller="communityController as community">
           <!-- Temporary -->
-          <p>DISCLAIMER: The Community tab will temporarily hold block information for testing purposes. After alpha phase this data  will be relocated inside the Preferences - Advanced area.</p>
+          <p>DISCLAIMER: This tab represents the block from this PRIVATE blockchain.</p>
+          <p>Click<a href="https://explorer.blackturtle.eu/" target="_blank"> here </a>to visit the block explorer</p>
           <h2 class="sectionHeader">LATEST BLOCKS INFORMATION</h2>
           <p class="centerIt">
           <div id="latestBlocks" class="wavesTable wScroll" >

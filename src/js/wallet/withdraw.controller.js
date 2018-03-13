@@ -25,7 +25,7 @@
         //         notificationService.notice(displayMessage);
         //     });
 
-        ctrl.autocomplete = autocomplete;
+        //ctrl.autocomplete = autocomplete;
 
         // ctrl.validationOptions = {
         //     onfocusout: function (element) {
@@ -158,104 +158,104 @@
             // });
         }
 
-        function withdrawEUR() {
-            ctrl.sourceCurrency = Currency.EUR.displayName;
-            dialogService.open('#withdraw-fiat-dialog');
-        }
+        // function withdrawEUR() {
+        //     ctrl.sourceCurrency = Currency.EUR.displayName;
+        //     dialogService.open('#withdraw-fiat-dialog');
+        // }
+        //
+        // function withdrawUSD() {
+        //     ctrl.sourceCurrency = Currency.USD.displayName;
+        //     dialogService.open('#withdraw-fiat-dialog');
+        // }
+        //
+        // function validateRecipientBTCAddress(recipient) {
+        //     if (!recipient.match(/^[0-9a-z]{27,34}$/i)) {
+        //         throw new Error('Bitcoin address is invalid. Expected address length is from 27 to 34 symbols');
+        //     }
+        //
+        //     if (notPermittedBitcoinAddresses[recipient]) {
+        //         throw new Error('Withdraw on deposit bitcoin accounts is not permitted');
+        //     }
+        // }
+        //
+        // function validateWithdrawCost(withdrawCost, availableFunds) {
+        //     if (withdrawCost.greaterThan(availableFunds)) {
+        //         throw new Error('Not enough Waves for the withdraw transfer');
+        //     }
+        // }
 
-        function withdrawUSD() {
-            ctrl.sourceCurrency = Currency.USD.displayName;
-            dialogService.open('#withdraw-fiat-dialog');
-        }
-
-        function validateRecipientBTCAddress(recipient) {
-            if (!recipient.match(/^[0-9a-z]{27,34}$/i)) {
-                throw new Error('Bitcoin address is invalid. Expected address length is from 27 to 34 symbols');
-            }
-
-            if (notPermittedBitcoinAddresses[recipient]) {
-                throw new Error('Withdraw on deposit bitcoin accounts is not permitted');
-            }
-        }
-
-        function validateWithdrawCost(withdrawCost, availableFunds) {
-            if (withdrawCost.greaterThan(availableFunds)) {
-                throw new Error('Not enough Waves for the withdraw transfer');
-            }
-        }
-
-        function confirmWithdraw (amountForm) {
-            if (!amountForm.validate(ctrl.validationOptions)) {
-                return false;
-            }
-
-            try {
-                var withdrawCost = Money.fromTokens(ctrl.autocomplete.getFeeAmount(), Currency.WAVES);
-                validateWithdrawCost(withdrawCost, ctrl.wavesBalance);
-                if (ctrl.assetBalance.currency === Currency.BTC) {
-                    validateRecipientBTCAddress(ctrl.recipient);
-                } else if (ctrl.assetBalance.currency === Currency.ETH) {
-                    // TODO
-                }
-            } catch (e) {
-                notificationService.error(e.message);
-                return false;
-            }
-
-            var total = Money.fromTokens(ctrl.total, ctrl.assetBalance.currency);
-            var fee = Money.fromTokens(ctrl.autocomplete.getFeeAmount(), Currency.WAVES);
-            ctrl.confirm.amount = total;
-            ctrl.confirm.fee = fee;
-            ctrl.confirm.recipient = ctrl.recipient;
-
-            coinomatService.getWithdrawDetails(ctrl.assetBalance.currency, ctrl.recipient)
-                .then(function (withdrawDetails) {
-                    ctrl.confirm.gatewayAddress = withdrawDetails.address;
-
-                    var assetTransfer = {
-                        recipient: withdrawDetails.address,
-                        amount: total,
-                        fee: fee,
-                        attachment: converters.stringToByteArray(withdrawDetails.attachment)
-                    };
-                    var sender = {
-                        publicKey: applicationContext.account.keyPair.public,
-                        privateKey: applicationContext.account.keyPair.private
-                    };
-                    // creating the transaction and waiting for confirmation
-                    ctrl.broadcast.setTransaction(assetService.createAssetTransferTransaction(assetTransfer, sender));
-
-                    resetForm();
-
-                    dialogService.open('#withdraw-confirmation');
-                })
-                .catch(function (exception) {
-                    notificationService.error(exception.message);
-                });
-
-            return true;
-        }
+        // function confirmWithdraw (amountForm) {
+        //     if (!amountForm.validate(ctrl.validationOptions)) {
+        //         return false;
+        //     }
+        //
+        //     try {
+        //         var withdrawCost = Money.fromTokens(ctrl.autocomplete.getFeeAmount(), Currency.WAVES);
+        //         validateWithdrawCost(withdrawCost, ctrl.wavesBalance);
+        //         if (ctrl.assetBalance.currency === Currency.BTC) {
+        //             validateRecipientBTCAddress(ctrl.recipient);
+        //         } else if (ctrl.assetBalance.currency === Currency.ETH) {
+        //             // TODO
+        //         }
+        //     } catch (e) {
+        //         notificationService.error(e.message);
+        //         return false;
+        //     }
+        //
+        //     var total = Money.fromTokens(ctrl.total, ctrl.assetBalance.currency);
+        //     var fee = Money.fromTokens(ctrl.autocomplete.getFeeAmount(), Currency.WAVES);
+        //     ctrl.confirm.amount = total;
+        //     ctrl.confirm.fee = fee;
+        //     ctrl.confirm.recipient = ctrl.recipient;
+        //
+        //     coinomatService.getWithdrawDetails(ctrl.assetBalance.currency, ctrl.recipient)
+        //         .then(function (withdrawDetails) {
+        //             ctrl.confirm.gatewayAddress = withdrawDetails.address;
+        //
+        //             var assetTransfer = {
+        //                 recipient: withdrawDetails.address,
+        //                 amount: total,
+        //                 fee: fee,
+        //                 attachment: converters.stringToByteArray(withdrawDetails.attachment)
+        //             };
+        //             var sender = {
+        //                 publicKey: applicationContext.account.keyPair.public,
+        //                 privateKey: applicationContext.account.keyPair.private
+        //             };
+        //             // creating the transaction and waiting for confirmation
+        //             ctrl.broadcast.setTransaction(assetService.createAssetTransferTransaction(assetTransfer, sender));
+        //
+        //             resetForm();
+        //
+        //             dialogService.open('#withdraw-confirmation');
+        //         })
+        //         .catch(function (exception) {
+        //             notificationService.error(exception.message);
+        //         });
+        //
+        //     return true;
+        // }
 
         function broadcastTransaction () {
             ctrl.broadcast.broadcast();
         }
-
-        function refreshTotal () {
-            var amount = ctrl.exchangeRate * ctrl.amount;
-            var total = Money.fromTokens(amount + ctrl.feeIn + ctrl.feeOut, ctrl.assetBalance.currency);
-            ctrl.total = total.formatAmount(true, false);
-        }
-
-        function refreshAmount () {
-            var total = Math.max(0, ctrl.exchangeRate * (ctrl.total - ctrl.feeIn) - ctrl.feeOut);
-            var amount = Money.fromTokens(total, ctrl.assetBalance.currency);
-            ctrl.amount = amount.formatAmount(true, false);
-        }
+        //
+        // function refreshTotal () {
+        //     var amount = ctrl.exchangeRate * ctrl.amount;
+        //     var total = Money.fromTokens(amount + ctrl.feeIn + ctrl.feeOut, ctrl.assetBalance.currency);
+        //     ctrl.total = total.formatAmount(true, false);
+        // }
+        //
+        // function refreshAmount () {
+        //     var total = Math.max(0, ctrl.exchangeRate * (ctrl.total - ctrl.feeIn) - ctrl.feeOut);
+        //     var amount = Money.fromTokens(total, ctrl.assetBalance.currency);
+        //     ctrl.amount = amount.formatAmount(true, false);
+        // }
 
         function resetForm () {
-            ctrl.recipient = '';
-            ctrl.address = '';
-            ctrl.autocomplete.defaultFee(Number(DEFAULT_FEE_AMOUNT));
+            // ctrl.recipient = '';
+            // ctrl.address = '';
+            // ctrl.autocomplete.defaultFee(Number(DEFAULT_FEE_AMOUNT));
         }
     }
 
