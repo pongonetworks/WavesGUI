@@ -97,7 +97,7 @@ module.exports = function (grunt) {
                 },
                 mainnet: {
                     name: 'mainnet',
-                    code: 'U',
+                    code: 'L',
                     server: 'https://privatenode.blackturtle.eu',
                     coinomat: 'https://coinomat.com',
                     matcher: 'https://privatematcher.blackturtle.eu',
