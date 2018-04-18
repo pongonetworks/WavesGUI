@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var FEE = 0.005,
+    var FEE = 0.04,
         BALANCE_UPDATE_DELAY = 5000;
 
     function OrderCreatorController($interval, applicationContext, matcherApiService) {

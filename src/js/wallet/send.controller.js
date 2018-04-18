@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var DEFAULT_FEE_AMOUNT = '0.002';
+    var DEFAULT_FEE_AMOUNT = '0.02';
     var FEE_CURRENCY = Currency.TN;
 
     function WalletSendController($scope, $timeout, constants, events, autocomplete,

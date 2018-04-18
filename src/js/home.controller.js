@@ -18,7 +18,7 @@
         home.logout = logout;
 
         var titlePrefix = utilsService.isTestnet() ? 'TESTNET ' : '';
-        home.title = titlePrefix + 'TurtleNode fork client';
+        home.title = titlePrefix + 'TurtleNetwork client';
         home.version = applicationConstants.CLIENT_VERSION;
 
         $scope.$on(events.SPLASH_COMPLETED, function () {

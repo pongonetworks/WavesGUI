@@ -47,7 +47,7 @@
         }
 
         function switchToCreateSeedMode() {
-            accounts.caption = 'SET UP YOUR SEED FOR TurtleNode platform';
+            accounts.caption = 'SET UP YOUR SEED FOR TurtleNetwork';
         }
 
         function switchToRegisterMode(seed) {

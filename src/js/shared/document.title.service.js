@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var prefix = 'TurtleNode fork client';
+    var prefix = 'TurtleNetwork fork client';
 
     angular
         .module('app.shared')

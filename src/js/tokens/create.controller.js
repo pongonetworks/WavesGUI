@@ -5,7 +5,7 @@
     var ASSET_NAME_MIN = 4;
     var ASSET_NAME_MAX = 16;
     var TOKEN_DECIMALS_MAX = 8;
-    var FIXED_ISSUE_FEE = new Money(10, Currency.TN);
+    var FIXED_ISSUE_FEE = new Money(1000, Currency.TN);
 
     function TokenCreateController($scope, $interval, constants, applicationContext, assetService,
                                    dialogService, apiService, notificationService,
