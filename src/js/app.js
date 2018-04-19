@@ -45,7 +45,7 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
             NODE_ADDRESS: 'https://privatenode.blackturtle.eu',
             COINOMAT_ADDRESS: 'https://coinomat.com',
             MATCHER_ADDRESS: 'https://privatematcher.blackturtle.eu',
-            DATAFEED_ADDRESS: 'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT'
+            DATAFEED_ADDRESS: 'https://bot.blackturtle.eu/api-0.0.1-SNAPSHOT'
         }));
 
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|local|data|file|chrome-extension):/);
@@ -54,7 +54,7 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
         'self',
         'https://test.coinomat.com/api/**',
         'https://coinomat.com/api/**',
-        'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT/**'
+        'https://bot.blackturtle.eu/api-0.0.1-SNAPSHOT/**'
     ]);
 
     // Globally disables all ARIA warnings.

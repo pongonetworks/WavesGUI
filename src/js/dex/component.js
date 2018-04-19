@@ -27,7 +27,7 @@
         emptyDataFields();
 
         var favoritePairs = [
-            { amountAsset: Currency.TN, priceAsset: Currency.TN },
+            { amountAsset: Currency.TN, priceAsset: Currency.TEST },
 
         ];
 

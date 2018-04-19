@@ -7,8 +7,8 @@
             var result = {
                 fees: [
                     {
-                        amount: 0.002,
-                        displayText: '0.002 TurtleNode'
+                        amount: 0.02,
+                        displayText: '0.02 TurtleNode'
                     }
                 ],
                 selectedFee: undefined,
