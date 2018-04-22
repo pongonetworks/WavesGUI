@@ -21,13 +21,18 @@
 
         ctrl.pair = {
             amountAsset: Currency.TN,
-            priceAsset: Currency.TEST
+            priceAsset: Currency.BTC
         };
 
         emptyDataFields();
 
         var favoritePairs = [
             { amountAsset: Currency.TN, priceAsset: Currency.TEST },
+            { amountAsset: Currency.TN, priceAsset: Currency.BTC },
+            { amountAsset: Currency.TN, priceAsset: Currency.LTC },
+            { amountAsset: Currency.TN, priceAsset: Currency.MN },
+            { amountAsset: Currency.TN, priceAsset: Currency.HN },
+            { amountAsset: Currency.TN, priceAsset: Currency.NATA },
 
         ];
 

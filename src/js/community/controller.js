@@ -5,7 +5,7 @@
         var community = this;
         var refreshPromise;
         var REFRESH_DELAY = 10 * 1000;
-        var BLOCKS_DEPTH = 100;
+        var BLOCKS_DEPTH = 50;
 
         community.candidate = {
             block: 0,

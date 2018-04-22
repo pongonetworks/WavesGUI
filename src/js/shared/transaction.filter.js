@@ -115,7 +115,7 @@
         }
 
         function processCancelLeasingTransaction(transaction) {
-            transaction.formatted.asset = Currency.WAVES.displayName;
+            transaction.formatted.asset = Currency.TN.displayName;
         }
 
         function processExchangeTransaction(transaction) {

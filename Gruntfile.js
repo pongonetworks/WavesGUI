@@ -101,7 +101,7 @@ module.exports = function (grunt) {
                     server: 'https://privatenode.blackturtle.eu',
                     coinomat: 'https://coinomat.com',
                     matcher: 'https://privatematcher.blackturtle.eu',
-                    datafeed: 'https://teamspeak.blackturtle.eu:8443/api-0.0.1-SNAPSHOT'
+                    datafeed: 'https://bot.blackturtle.eu/api-0.0.1-SNAPSHOT'
                 },
                 devnet: {
                     name: 'devnet',
