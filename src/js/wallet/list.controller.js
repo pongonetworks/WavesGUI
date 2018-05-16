@@ -27,6 +27,26 @@
             {
                 balance: new Money(0, Currency.TN),
                 depositWith: Currency.TN
+            },
+            {
+                balance: new Money(0, Currency.BTC),
+                depositWith: Currency.BTC
+            },
+            {
+                balance: new Money(0, Currency.LTC),
+                depositWith: Currency.LTC
+            },
+            {
+                balance: new Money(0, Currency.WAVES),
+                depositWith: Currency.WAVES
+            },
+            {
+                balance: new Money(0, Currency.DASH),
+                depositWith: Currency.DASH
+            },
+            {
+                balance: new Money(0, Currency.WGR),
+                depositWith: Currency.WGR
             }
         ];
 

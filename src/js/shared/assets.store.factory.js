@@ -4,7 +4,10 @@
     // TODO : move to the future `appState` service.
 
     var predefinedAssets = [
-        Currency.TN
+        Currency.TN,
+        Currency.BTC,
+        Currency.LTC,
+        Currency.WAVES
     ];
 
     angular

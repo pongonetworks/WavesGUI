@@ -27,12 +27,21 @@
         emptyDataFields();
 
         var favoritePairs = [
-            { amountAsset: Currency.TN, priceAsset: Currency.TEST },
             { amountAsset: Currency.TN, priceAsset: Currency.BTC },
             { amountAsset: Currency.TN, priceAsset: Currency.LTC },
+            { amountAsset: Currency.TN, priceAsset: Currency.WAVES },
+            { amountAsset: Currency.TN, priceAsset: Currency.DASH },
+            { amountAsset: Currency.WGR, priceAsset: Currency.TN },
+            { amountAsset: Currency.WGR, priceAsset: Currency.BTC },
+            { amountAsset: Currency.BTC, priceAsset: Currency.WAVES },
+            { amountAsset: Currency.BTC, priceAsset: Currency.DASH },
+            { amountAsset: Currency.LTC, priceAsset: Currency.DASH },
             { amountAsset: Currency.TN, priceAsset: Currency.MN },
             { amountAsset: Currency.TN, priceAsset: Currency.HN },
             { amountAsset: Currency.TN, priceAsset: Currency.NATA },
+            { amountAsset: Currency.TN, priceAsset: Currency.MAXIM },
+            { amountAsset: Currency.TN, priceAsset: Currency.POL },
+            { amountAsset: Currency.TN, priceAsset: Currency.CWV },
 
         ];
 

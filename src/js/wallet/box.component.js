@@ -9,6 +9,26 @@
             image: 'logo_Turtle.svg',
             displayName: Currency.TN.displayName
         };
+        mapping[Currency.LTC.displayName] = {
+            image: 'wB-bg-LTC.svg',
+            displayName: Currency.LTC.displayName
+        };
+        mapping[Currency.BTC.displayName] = {
+            image: 'wB-bg-BTC.svg',
+            displayName: Currency.BTC.displayName
+        };
+        mapping[Currency.WAVES.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.WAVES.displayName
+        };
+        mapping[Currency.DASH.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.DASH.displayName
+        };
+        mapping[Currency.WGR.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.WGR.displayName
+        };
 
         ctrl.$onChanges = function (changesObject) {
             if (changesObject.balance) {
