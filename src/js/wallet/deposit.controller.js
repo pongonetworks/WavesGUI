@@ -6,8 +6,52 @@
     function WavesWalletDepositController($scope, events, coinomatService, dialogService, notificationService,
                                           applicationContext, bitcoinUriService, utilsService, $element) {
 
-        // var ctrl = this;
-        // var currencyId = Currency[$element.data('currency')].id;
+        var ctrl = this;
+        var currencyId = Currency[$element.data('currency')].id;
+        console.log("depositcontroller triggered")
+        $scope.$on(events.WALLET_DEPOSIT + currencyId, function (event, eventData) {
+            ctrl.depositWith = eventData.depositWith;
+            ctrl.assetBalance = eventData.assetBalance;
+            ctrl.currency = ctrl.assetBalance.currency.displayName;
+            console.log("asset balance print");
+            console.log(ctrl.assetBalance.currency);
+            // Show deposit popups only on mainnet
+            if (ctrl.assetBalance.currency === Currency.BTC) {
+                console.log("BTC deposit");
+                depositBTC();
+            } else if (ctrl.assetBalance.currency === Currency.LTC) {
+                depositLTC();
+            } else if (ctrl.assetBalance.currency === Currency.WAVES) {
+                depositWAVES();
+            } else if (ctrl.assetBalance.currency === Currency.WGR) {
+                depositWGR();
+            } else if (ctrl.assetBalance.currency === Currency.DASH) {
+                depositDASH();
+            } else if (ctrl.assetBalance.currency === Currency.TN) {
+                depositTN();
+            } else {
+                $scope.home.featureUnderDevelopment();
+            }
+            function depositBTC() {
+                dialogService.open('#deposit-btc-dialog');
+            }
+            function depositLTC() {
+                dialogService.open('#deposit-ltc-dialog');
+            }
+            function depositWGR() {
+                dialogService.open('#deposit-wgr-dialog');
+            }
+            function depositDASH() {
+                dialogService.open('#deposit-dash-dialog');
+            }
+            function depositWAVES() {
+                dialogService.open('#deposit-waves-dialog');
+            }
+            function depositTN() {
+                dialogService.open('#deposit-tn-dialog');
+            }
+        });
+
         //
         // ctrl.btc = {
         //     bitcoinAddress: '',

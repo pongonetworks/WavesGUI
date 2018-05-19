@@ -26,7 +26,7 @@
             displayName: Currency.DASH.displayName
         };
         mapping[Currency.WGR.displayName] = {
-            image: 'wB-bg-WAV.svg',
+            image: 'wB-bg-WGR.png',
             displayName: Currency.WGR.displayName
         };
 
