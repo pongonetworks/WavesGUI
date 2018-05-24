@@ -85,6 +85,7 @@
                         name: ''
                     };
 
+                    assetBalance.issueTransaction.assetId = assetBalance.issueTransaction.id;
                     // adding asset details to cache
                     applicationContext.cache.putAsset(assetBalance.issueTransaction);
                     applicationContext.cache.updateAsset(id, assetBalance.balance,
