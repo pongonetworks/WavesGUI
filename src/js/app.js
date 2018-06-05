@@ -42,7 +42,7 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
     $provide.constant(applicationSettings,
         angular.extend(applicationSettings, {
             CLIENT_VERSION: '0.5.1TN',
-            NODE_ADDRESS: 'https://privatenode.blackturtle.eu',
+            NODE_ADDRESS: 'https://privatenode2.blackturtle.eu',
             COINOMAT_ADDRESS: 'https://coinomat.com',
             MATCHER_ADDRESS: 'https://privatematcher.blackturtle.eu',
             DATAFEED_ADDRESS: 'https://bot.blackturtle.eu/api-0.0.1-SNAPSHOT'
@@ -132,19 +132,43 @@ function AngularApplicationConfig($provide, $compileProvider, $validatorProvider
 AngularApplicationConfig.$inject = ['$provide', '$compileProvider', '$validatorProvider', '$qProvider',
     '$sceDelegateProvider', '$mdAriaProvider', 'constants.network', 'constants.application'];
 
-function AngularApplicationRun(rest, applicationConstants, notificationService, addressService) {
+function AngularApplicationRun(rest, applicationConstants, notificationService, addressService,$http) {
     'use strict';
 
     // restangular configuration
     rest.setDefaultHttpFields({
         timeout: 10000 // milliseconds
     });
-    var url = applicationConstants.NODE_ADDRESS;
     //var url = 'http://52.28.66.217:6869';
     //var url = 'http://52.77.111.219:6869';
     //var url = 'http://127.0.0.1:6869';
     //var url = 'http://127.0.0.1:8089';
-    rest.setBaseUrl(url);
+    var url = applicationConstants.NODE_ADDRESS;
+
+    $http.get(url + '/node/status').then (successCallback, errorCallback);
+
+    function successCallback (response) {
+        url = applicationConstants.NODE_ADDRESS;
+        console.log('main working');
+        rest.setBaseUrl(url);
+
+    }
+    function errorCallback(error) {
+        url = 'https://privatenode2.blackturtle.eu';
+        $http.get(url + '/node/status').then (successCallback2, errorCallback2);
+        function successCallback2 (response) {
+            url = 'https://privatenode2.blackturtle.eu';
+            console.log('backup working');
+            rest.setBaseUrl(url);
+
+        }
+        function errorCallback2(error) {
+            url = 'https://giznode.thegremlins.net';
+            console.log('backup working 2');
+            rest.setBaseUrl(url);
+        }
+
+    }
 
     // override mock methods cos in config phase services are not available yet
     __mockShowError = function (message) {
@@ -155,4 +179,5 @@ function AngularApplicationRun(rest, applicationConstants, notificationService, 
     };
 }
 
-AngularApplicationRun.$inject = ['Restangular', 'constants.application', 'notificationService', 'addressService'];
+AngularApplicationRun.$inject = ['Restangular', 'constants.application', 'notificationService',
+    'addressService', '$http'];

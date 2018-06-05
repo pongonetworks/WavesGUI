@@ -7,10 +7,10 @@
   <a ng-click="$ctrl.onSend({currency: $ctrl.balance.currency})">
     <div class="wB-but wB-butSend fade"><p>SEND</p></div>
   </a>
-  <a ng-click="$ctrl.onWithdraw({currency: $ctrl.balance.currency})">
+  <a ng-href="{{$ctrl.gatewayAddr}}" target="_blank">
     <div class="wB-but wB-butRec fade"><p>WITHDRAW</p></div>
   </a>
-  <a ng-click="$ctrl.onDeposit({currency: $ctrl.balance.currency})">
+  <a ng-href="{{$ctrl.gatewayAddr}}" target="_blank">
     <div class="wB-but wB-butTrade fade"><p>DEPOSIT</p></div>
   </a>
 </div>

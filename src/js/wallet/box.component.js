@@ -7,27 +7,33 @@
         var mapping = {};
         mapping[Currency.TN.displayName] = {
             image: 'logo_Turtle.svg',
-            displayName: Currency.TN.displayName
+            displayName: Currency.TN.displayName,
+            gatewayAddr: 'https://gateway.blackturtle.eu'
         };
         mapping[Currency.LTC.displayName] = {
             image: 'wB-bg-LTC.svg',
-            displayName: Currency.LTC.displayName
+            displayName: Currency.LTC.displayName,
+            gatewayAddr: 'https://litecoingw.blackturtle.eu'
         };
         mapping[Currency.BTC.displayName] = {
             image: 'wB-bg-BTC.svg',
-            displayName: Currency.BTC.displayName
+            displayName: Currency.BTC.displayName,
+            gatewayAddr: 'https://bitcoingw.blackturtle.eu'
         };
         mapping[Currency.WAVES.displayName] = {
             image: 'wB-bg-WAV.svg',
-            displayName: Currency.WAVES.displayName
+            displayName: Currency.WAVES.displayName,
+            gatewayAddr: 'https://wavesgateway.blackturtle.eu'
         };
         mapping[Currency.DASH.displayName] = {
             image: 'wB-bg-WAV.svg',
-            displayName: Currency.DASH.displayName
+            displayName: Currency.DASH.displayName,
+            gatewayAddr: 'https://dashgw.blackturtle.eu'
         };
         mapping[Currency.WGR.displayName] = {
             image: 'wB-bg-WGR.png',
-            displayName: Currency.WGR.displayName
+            displayName: Currency.WGR.displayName,
+            gatewayAddr: 'https://wagerrgw.blackturtle.eu'
         };
 
         ctrl.$onChanges = function (changesObject) {
@@ -40,6 +46,7 @@
         ctrl.$onInit = function () {
             ctrl.image = mapping[ctrl.balance.currency.displayName].image;
             ctrl.displayName = mapping[ctrl.balance.currency.displayName].displayName;
+            ctrl.gatewayAddr = mapping[ctrl.balance.currency.displayName].gatewayAddr;
         };
     }
 

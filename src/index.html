@@ -53,7 +53,7 @@
 
     <thead>
     <div id="logoNversion">
-      <img src="img/topleftlogo.svg" />
+      <img src="img/topleftlogo.svg" style="width: 50%; height: 50%" />
       <p ng-class='{testnet: isTestnet()}'>{{::home.title}} <span class="wlcversion">{{::home.version}}</span></p>
     </div>
     </thead>
@@ -241,9 +241,9 @@
 
   <!-- HEADER -->
   <header class="fFade noSelect" ng-controller="mainMenuController as menu">
-    <img id="topLogoH" src="img/topleftlogo_hor.svg" alt="Waves platform logo horizontal" />
+    <img id="topLogoH" src="img/topleftlogo_hor.svg" style="width: 50%; height: 50%" alt="Waves platform logo horizontal" />
     <div id="logoNversion2">
-      <img src="img/topleftlogo.svg" />
+      <img src="img/topleftlogo.svg" style="width: 50%; height: 50%" />
       <p ng-class='{testnet: isTestnet()}'>{{::home.title}} <span class="wlcversion">{{::home.version}}</span></p>
     </div>
     <span id="version" class="centerIt">
@@ -969,7 +969,7 @@
         <!-- COMMUNITY TAB -->
         <div id="mBB-community" class="mBB-content" ng-switch-when="community" ng-controller="communityController as community">
           <!-- Temporary -->
-          <p>DISCLAIMER: This tab represents the block from this PRIVATE blockchain.</p>
+          <p>DISCLAIMER: This tab represents the block from Turtle Network blockchain.</p>
           <p>Click<a href="https://explorer.blackturtle.eu/" target="_blank"> here </a>to visit the block explorer</p>
           <h2 class="sectionHeader">LATEST BLOCKS INFORMATION</h2>
           <p class="centerIt">
