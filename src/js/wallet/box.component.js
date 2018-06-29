@@ -35,6 +35,11 @@
             displayName: Currency.WGR.displayName,
             gatewayAddr: 'https://wagerrgw.blackturtle.eu'
         };
+        mapping[Currency.SYS.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.SYS.displayName,
+            gatewayAddr: 'https://syscoingw.blackturtle.eu'
+        };
 
         ctrl.$onChanges = function (changesObject) {
             if (changesObject.balance) {

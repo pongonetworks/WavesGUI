@@ -22,6 +22,7 @@
             }
         });
 
+        ctrl.regex = /^[^[:/\\.]+$/;
         ctrl.wavesBalance = new Money(0, Currency.TN);
         ctrl.issuanceValidationOptions = {
             rules: {

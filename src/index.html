@@ -874,6 +874,7 @@
 
           <div ng-controller="tokenCreateController as ctrl">
             <h2 class="sectionHeader">TOKEN CREATION</h2>
+            <span ng-if="createAssetForm.assetName.$error.pattern">Invalid Pattern For Asset. Don't use . / :</span>
             <form id="create-asset-form" name="createAssetForm" novalidate ng-validate="ctrl.issuanceValidationOptions" ng-submit="ctrl.assetIssueConfirmation(createAssetForm, $event)">
               <div class="balanceAmt">
                 <p>TN balance: </p><span class="balancewaves">{{ctrl.wavesBalance | moneyLong:true}}</span>
@@ -888,7 +889,7 @@
                 <tbody>
                 <tr>
                   <td><label for="assetName">Name</label></td>
-                  <td><input id="assetName" name="assetName" type="text" class="wInput form-control" focus-me="true" ng-model="ctrl.asset.name" tooltipster tooltip-theme="tooltipster-theme1" tooltip-html title="This field defines the NAME of your<br/>asset.<br/><br/>It can contain up to 16 alphanumeric<br/>characters."/></td>
+                  <td><input id="assetName" name="assetName" type="text" class="wInput form-control" focus-me="true" ng-model="ctrl.asset.name" ng-pattern="ctrl.regex" tooltipster tooltip-theme="tooltipster-theme1" tooltip-html title="This field defines the NAME of your<br/>asset.<br/><br/>It can contain up to 16 alphanumeric<br/>characters."/></td>
                 </tr><br/>
                 <tr>
                   <td><label for="assetDescription">Description</label></td>

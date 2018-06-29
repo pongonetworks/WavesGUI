@@ -32,6 +32,7 @@
             { amountAsset: Currency.TN, priceAsset: Currency.WAVES },
             { amountAsset: Currency.TN, priceAsset: Currency.DASH },
             { amountAsset: Currency.WGR, priceAsset: Currency.TN },
+            { amountAsset: Currency.SYS, priceAsset: Currency.TN },
             { amountAsset: Currency.WGR, priceAsset: Currency.BTC },
             { amountAsset: Currency.BTC, priceAsset: Currency.WAVES },
             { amountAsset: Currency.BTC, priceAsset: Currency.DASH },

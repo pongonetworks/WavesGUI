@@ -47,6 +47,10 @@
             {
                 balance: new Money(0, Currency.WGR),
                 depositWith: Currency.WGR
+            },
+            {
+                balance: new Money(0, Currency.SYS),
+                depositWith: Currency.SYS
             }
         ];
 
