@@ -93,6 +93,11 @@
                 return;
             }
 
+            if (ctrl.asset.description.indexOf('.') !== -1 && ctrl.asset.description.indexOf('. ') === -1) {
+                notificationService.error('No letter directly connected with a dot (.) allowed.');
+                return;
+            }
+
             if (ctrl.asset.fee.greaterThan(ctrl.wavesBalance)) {
                 notificationService.error('Not enough funds for the issue transaction fee');
                 return;
