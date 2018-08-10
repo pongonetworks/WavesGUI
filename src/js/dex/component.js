@@ -30,6 +30,7 @@
             { amountAsset: Currency.TN, priceAsset: Currency.BTC },
             { amountAsset: Currency.TN, priceAsset: Currency.LTC },
             { amountAsset: Currency.TN, priceAsset: Currency.WAVES },
+            { amountAsset: Currency.TN, priceAsset: Currency.SYS },
             { amountAsset: Currency.TN, priceAsset: Currency.DASH },
             { amountAsset: Currency.WGR, priceAsset: Currency.TN },
             { amountAsset: Currency.SYS, priceAsset: Currency.TN },
@@ -37,6 +38,9 @@
             { amountAsset: Currency.BTC, priceAsset: Currency.WAVES },
             { amountAsset: Currency.BTC, priceAsset: Currency.DASH },
             { amountAsset: Currency.LTC, priceAsset: Currency.DASH },
+            { amountAsset: Currency.TN, priceAsset: Currency.HN },
+            { amountAsset: Currency.WAVES, priceAsset: Currency.HN },
+            { amountAsset: Currency.WGR, priceAsset: Currency.HN },
 
         ];
 
