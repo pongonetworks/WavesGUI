@@ -51,6 +51,14 @@
             {
                 balance: new Money(0, Currency.SYS),
                 depositWith: Currency.SYS
+            },
+            {
+                balance: new Money(0, Currency.DOGE),
+                depositWith: Currency.DOGE
+            },
+            {
+                balance: new Money(0, Currency.BCH),
+                depositWith: Currency.BCH
             }
         ];
 

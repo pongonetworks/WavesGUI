@@ -8,37 +8,65 @@
         mapping[Currency.TN.displayName] = {
             image: 'logo_Turtle.svg',
             displayName: Currency.TN.displayName,
-            gatewayAddr: 'https://gateway.blackturtle.eu'
+            gatewayAddr: 'https://gateway.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'TurtleNode-Gateway:-How-to-swap-%24TN-from-Waves-Platform-to-Turtle-Network'
         };
         mapping[Currency.LTC.displayName] = {
             image: 'wB-bg-LTC.svg',
             displayName: Currency.LTC.displayName,
-            gatewayAddr: 'https://litecoingw.blackturtle.eu'
+            gatewayAddr: 'https://litecoingw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'Litecoin-Gateway:-How-to-swap-%24LTC-to-Turtle-Network-%24tLTC'
         };
         mapping[Currency.BTC.displayName] = {
             image: 'wB-bg-BTC.svg',
             displayName: Currency.BTC.displayName,
-            gatewayAddr: 'https://bitcoingw.blackturtle.eu'
+            gatewayAddr: 'https://bitcoingw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/' +
+            'wiki/Bitcoin-Gateway:-How-to-swap-%24BTC-to-Turtle-Network-%24tBTC'
         };
         mapping[Currency.WAVES.displayName] = {
             image: 'wB-bg-WAV.svg',
             displayName: Currency.WAVES.displayName,
-            gatewayAddr: 'https://wavesgateway.blackturtle.eu'
+            gatewayAddr: 'https://wavesgateway.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'Waves-Gateway:-How-to-swap-%24WAVES-to-Turtle-Network-%24tWAVES'
         };
         mapping[Currency.DASH.displayName] = {
             image: 'wB-bg-WAV.svg',
             displayName: Currency.DASH.displayName,
-            gatewayAddr: 'https://dashgw.blackturtle.eu'
+            gatewayAddr: 'https://dashgw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'Dash-Gateway:-How-to-swap-%24DASH-to-Turtle-Network-%24tDASH'
         };
         mapping[Currency.WGR.displayName] = {
             image: 'wB-bg-WGR.png',
             displayName: Currency.WGR.displayName,
-            gatewayAddr: 'https://wagerrgw.blackturtle.eu'
+            gatewayAddr: 'https://wagerrgw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'Wagerr-Gateway:-How-to-swap-%24WGR-to-Turtle-Network-%24tWGR'
         };
         mapping[Currency.SYS.displayName] = {
             image: 'wB-bg-WAV.svg',
             displayName: Currency.SYS.displayName,
-            gatewayAddr: 'https://syscoingw.blackturtle.eu'
+            gatewayAddr: 'https://syscoingw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'Syscoin-Gateway:-How-to-swap-%24SYS-to-Turtle-Network-%24tSYS'
+        };
+        mapping[Currency.DOGE.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.DOGE.displayName,
+            gatewayAddr: 'https://dogegw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'DOGE-Gateway:-How-to-swap-%24DOGE-to-Turtle-Network-%24tDOGE'
+        };
+        mapping[Currency.BCH.displayName] = {
+            image: 'wB-bg-WAV.svg',
+            displayName: Currency.BCH.displayName,
+            gatewayAddr: 'https://bchgw.blackturtle.eu',
+            info: 'https://github.com/BlackTurtle123/TurtleNetwork/wiki/' +
+            'BitcoinCash-Gateway:-How-to-swap-%24BCH-to-Turtle-Network-%24tBCH'
         };
 
         ctrl.$onChanges = function (changesObject) {
@@ -52,6 +80,7 @@
             ctrl.image = mapping[ctrl.balance.currency.displayName].image;
             ctrl.displayName = mapping[ctrl.balance.currency.displayName].displayName;
             ctrl.gatewayAddr = mapping[ctrl.balance.currency.displayName].gatewayAddr;
+            ctrl.info = mapping[ctrl.balance.currency.displayName].info;
         };
     }
 
