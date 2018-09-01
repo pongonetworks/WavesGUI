@@ -2,11 +2,12 @@
     'use strict';
 
     /**
-     * @param $q
      * @param {typeof PromiseControl} PromiseControl
      * @return {TimeLine}
      */
-    const factory = function ($q, PromiseControl) {
+    const factory = function (PromiseControl) {
+
+        const tsUtils = require('ts-utils');
 
         class TimerList {
 
@@ -72,8 +73,8 @@
             timeout(callback, timeout) {
                 const start = Date.now();
                 const id = tsUtils.uniqueId('timeLineItem');
-                const defer = $q.defer();
-                const promise = new PromiseControl(defer.promise);
+                const defer = $.Deferred();
+                const promise = new PromiseControl(defer.promise());
                 promise.id = id;
                 promise.start = start;
                 promise.time = timeout;
@@ -121,10 +122,14 @@
                 for (let i = this._listeners.list.length - 1; i >= 0; i--) {
                     const item = this._listeners.list[i];
                     if (now - item.start >= item.timeout) {
-                        if (item.handler) {
-                            item.handler();
+                        try {
+                            if (item.handler) {
+                                item.handler();
+                            }
+                            item.defer.resolve();
+                        } catch (e) {
+                            // Exception in timeout callback!
                         }
-                        item.defer.resolve();
                         this._listeners.remove(item);
                     } else {
                         break;
@@ -145,7 +150,7 @@
                 this._timer = setTimeout(() => {
                     this._timer = null;
                     this._run();
-                }, 500);
+                }, 200);
             }
 
         }
@@ -153,7 +158,7 @@
         return new TimeLine();
     };
 
-    factory.$inject = ['$q', 'PromiseControl'];
+    factory.$inject = ['PromiseControl'];
 
     angular.module('app.utils').factory('timeLine', factory);
 })();

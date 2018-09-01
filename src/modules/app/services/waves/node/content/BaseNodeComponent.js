@@ -2,50 +2,71 @@
     'use strict';
 
     /**
+     * @param {Base} Base
      * @param {app.utils} utils
      * @param {EventManager} eventManager
-     * @param {app.utils.decorators} decorators
+     * @param {User} user
      * @return {BaseNodeComponent}
      */
-    const factory = function (utils, eventManager, decorators) {
+    const factory = function (Base, utils, eventManager, user) {
 
-        class BaseNodeComponent {
+        const TYPES = WavesApp.TRANSACTION_TYPES.NODE;
+
+        class BaseNodeComponent extends Base {
+
+            get matcher() {
+                return user.getSetting('network.matcher');
+            }
+
+            get node() {
+                return user.getSetting('network.node');
+            }
 
             /**
              * Get list of available fee for transaction
              * @param {string} transactionType
+             * @param {*} [tx]
              * @return {Promise<Money[]>}
              * @protected
              */
-            @decorators.cachable()
-            _feeList(transactionType) {
-                switch (transactionType) {
-                    case 'transfer':
-                    case 'exchange':
-                    case 'lease':
-                    case 'cancelLeasing':
-                    case 'createAlias':
-                    case 'burn':
-                        return utils.whenAll([
-                            Waves.Money.fromTokens('0.001', WavesApp.defaultAssets.WAVES)
+            _feeList({ type, tx }) {
+                switch (type) {
+                    case TYPES.TRANSFER:
+                    case TYPES.BURN:
+                    case TYPES.CREATE_ALIAS:
+                    case TYPES.LEASE:
+                    case TYPES.CANCEL_LEASING:
+                        return Promise.all([
+                            ds.moneyFromTokens('0.001', WavesApp.defaultAssets.WAVES)
                         ]);
-                    case 'reissue':
-                    case 'issue':
+                    case TYPES.MASS_TRANSFER:
+                        return Promise.all([
+                            ds.moneyFromTokens('0', WavesApp.defaultAssets.WAVES).then((money) => {
+                                const len = tx && tx.transfers && tx.transfers.length || 0;
+                                const factor = !(len % 2) ? len : len + 1;
+                                const transfer = new BigNumber('0.001');
+                                const massTransfer = new BigNumber('0.001').div(2);
+                                return money.cloneWithTokens(transfer.plus(massTransfer.times(factor)));
+                            })
+                        ]);
+                    case TYPES.ISSUE:
+                    case TYPES.REISSUE:
                         return utils.whenAll([
-                            Waves.Money.fromTokens('1', WavesApp.defaultAssets.WAVES)
+                            ds.moneyFromTokens('1', WavesApp.defaultAssets.WAVES)
                         ]);
                     default:
-                        throw new Error(`Wrong transaction type! ${transactionType}`);
+                        throw new Error(`Wrong transaction type! ${type}`);
                 }
             }
 
             /**
-             * @param {string} transactionType
+             * @param {string} type
+             * @param {*} tx
              * @param {Money} [fee]
              * @return {Promise<Money>}
              */
-            getFee(transactionType, fee) {
-                return this._feeList(transactionType)
+            getFee({ type, tx, fee }) {
+                return this._feeList({ type, tx })
                     .then((list) => {
                         if (fee) {
                             const hash = utils.toHash(list, 'asset.id');
@@ -77,7 +98,7 @@
         return BaseNodeComponent;
     };
 
-    factory.$inject = ['utils', 'eventManager', 'decorators'];
+    factory.$inject = ['Base', 'utils', 'eventManager', 'user'];
 
     angular.module('app')
         .factory('BaseNodeComponent', factory);

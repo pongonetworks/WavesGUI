@@ -1,7 +1,27 @@
 /* eslint-disable no-console */
-/* global tsUtils, BigNumber */
+/* global BigNumber */
 (function () {
     'use strict';
+
+    const tsUtils = require('ts-utils');
+    const tsApiValidator = require('ts-api-validator');
+    const { WindowAdapter, Bus } = require('@waves/waves-browser-bus');
+
+    class BigNumberPart extends tsApiValidator.BasePart {
+
+        getValue(data) {
+            switch (typeof data) {
+                case 'string':
+                case 'number':
+                    return new BigNumber(data);
+                default:
+                    return null;
+            }
+        }
+
+    }
+
+    const dataEntities = require('@waves/data-entities');
 
     /**
      * @name app.utils
@@ -18,6 +38,13 @@
         const utils = {
 
             /**
+             * @name app.utils#apiValidatorParts
+             */
+            apiValidatorParts: {
+                BigNumberPart
+            },
+
+            /**
              * @name app.utils#observe
              * @param {object} target
              * @param {string|string[]} keys
@@ -32,21 +59,53 @@
 
             /**
              * @name app.utils#debounce
-             * @param {function} handler
+             * @param {function} callback
              * @param {number} [timeout]
              * @return {Function}
              */
-            debounce(handler, timeout) {
-                let timer = null;
-                return function (...args) {
-                    if (timer) {
-                        clearTimeout(timer);
-                    }
-                    timer = setTimeout(() => {
-                        timer = null;
-                        handler.call(this, ...args);
-                    }, timeout);
+            debounce(callback, timeout) {
+                const control = {
+                    queued: false,
+                    args: null
                 };
+                return function (...args) {
+                    control.args = args;
+                    if (!control.queued) {
+                        setTimeout(() => {
+                            control.queued = false;
+                            callback.call(this, ...control.args);
+                        }, timeout);
+                    }
+                    control.queued = true;
+                };
+            },
+
+            /**
+             * @name app.utils#parseElectronUrl
+             * @param {string} url
+             * @return {{path: string, search: string, hash: string}}
+             */
+            parseElectronUrl(url) {
+                const [pathAndSearch, hash] = url.split('#');
+                const [path, search] = pathAndSearch.split('?');
+
+                return {
+                    path,
+                    search: `?${search || ''}`,
+                    hash: `#${hash || ''}`
+                };
+            },
+
+            /**
+             * @name app.utils#redirect
+             * @param {string} url
+             */
+            redirect(url) {
+                if (WavesApp.isDesktop()) {
+                    window.openInBrowser(url);
+                } else {
+                    location.href = url;
+                }
             },
 
             /**
@@ -55,12 +114,16 @@
              * @return {object}
              */
             parseSearchParams(search = '') {
-                const hashes = search.slice(search.indexOf('?') + 1).split('&');
+                const hashes = search.slice(search.indexOf('?') + 1).split('&').filter(Boolean);
                 const params = Object.create(null);
 
                 hashes.forEach((hash) => {
                     const [key, val] = hash.split('=');
-                    params[key] = decodeURIComponent(val);
+                    if (val == null) {
+                        params[key] = true;
+                    } else {
+                        params[key] = decodeURIComponent(val);
+                    }
                 });
 
                 return params;
@@ -96,7 +159,7 @@
              * @return {Promise}
              */
             animate($element, properties, options) {
-                return $q((resolve) => {
+                return new Promise((resolve) => {
                     options = options || Object.create(null);
                     if (options.complete) {
                         const origin = options.complete;
@@ -185,38 +248,20 @@
              * @return {Promise}
              */
             when(data) {
-                if (data && data.then && typeof data.then === 'function') {
-                    const defer = $q.defer();
-                    data.then(defer.resolve, defer.reject)
-                        .catch((e) => console.error(e));
-                    return defer.promise;
+                if (this.isPromise(data)) {
+                    return data;
                 } else {
-                    return $q.when(data);
+                    return Promise.resolve(data);
                 }
             },
 
             /**
-             * @name app.utils#onFetch
-             * @param {Response} response
-             * @return {Promise}
+             * @name app.utils#isPromise
+             * @param {object|Promise} data
+             * @return {boolean}
              */
-            onFetch(response) {
-                if (response.ok) {
-                    if (response.headers.get('Content-Type').indexOf('application/json') !== -1) {
-                        return response.text().then(WavesApp.parseJSON);
-                    } else {
-                        return response.text();
-                    }
-                } else {
-                    return response.text()
-                        .then((error) => {
-                            try {
-                                return Promise.reject(JSON.parse(error));
-                            } catch (e) {
-                                return Promise.reject(error);
-                            }
-                        });
-                }
+            isPromise(data) {
+                return data.then && typeof data.then === 'function';
             },
 
             /**
@@ -226,6 +271,20 @@
              */
             whenAll(promises) {
                 return utils.when(Promise.all(promises));
+            },
+
+            /**
+             * @name app.utils#getMoneyWithoutFee
+             * @param {Money} money
+             * @param {Money} fee
+             * @return {Money}
+             */
+            getMoneyWithoutFee(money, fee) {
+                if (fee && money.asset.id === fee.asset.id) {
+                    return money.sub(fee);
+                } else {
+                    return money;
+                }
             },
 
             /**
@@ -292,7 +351,7 @@
                 const getCallback = (state, resolve) => {
                     return (data) => resolve({ state, data });
                 };
-                return $q((resolve) => {
+                return new Promise((resolve) => {
                     promiseLike.then(getCallback(true, resolve), getCallback(false, resolve));
                 });
             },
@@ -316,7 +375,7 @@
              * @return {Promise}
              */
             loadImage(url) {
-                return $q((resolve, reject) => {
+                return new Promise((resolve, reject) => {
                     const img = new Image();
                     img.onload = resolve;
                     img.onerror = reject;
@@ -334,10 +393,10 @@
                 switch (typeof num) {
                     case 'string':
                     case 'number':
-                        return new BigNumber(num, 10).toFormat(precision);
+                        return new BigNumber(num, 10).toFormat(precision && Number(precision));
                     case 'object':
                         if (num != null) {
-                            return num.toFormat(precision);
+                            return num.toFormat(precision && Number(precision));
                         }
                         throw new Error('Wrong format!');
                     default:
@@ -347,13 +406,189 @@
 
             /**
              * @name app.utils#parseNiceNumber
-             * @param data
+             * @param {*} data
              * @return {BigNumber}
              */
             parseNiceNumber(data) {
-                return new BigNumber((String(data)
+                if (data instanceof BigNumber) {
+                    return data;
+                }
+                const num = new BigNumber((String(data)
                     .replace(',', '')
                     .replace(/\s/g, '') || 0), 10);
+
+                return num.isNaN() ? new BigNumber(0) : num;
+            },
+
+            /**
+             * @name app.utils#loadOrTimeout
+             * @param {Window} target
+             * @param {number} timeout
+             * @return {Promise<any>}
+             */
+            loadOrTimeout(target, timeout) {
+                return new Promise((resolve, reject) => {
+                    target.addEventListener('load', resolve, false);
+                    target.addEventListener('error', reject, false);
+
+                    setTimeout(() => {
+                        reject(new Error('Timeout limit error!'));
+                    }, timeout);
+                });
+            },
+
+            /**
+             * @name app.utils#importUsersByWindow
+             * @param {Window} win
+             * @param {string} origin
+             * @param {number} timeout
+             * @return {Promise<any>}
+             */
+            importUsersByWindow(win, origin, timeout) {
+                return new Promise((resolve, reject) => {
+                    const adapter = new WindowAdapter(
+                        { win: window, origin: WavesApp.targetOrigin },
+                        { win, origin }
+                    );
+                    const bus = new Bus(adapter);
+
+                    bus.once('export-ready', () => {
+                        bus.request('getLocalStorageData')
+                            .then(utils.onExportUsers(origin, resolve));
+                    });
+
+                    setTimeout(() => {
+                        reject(new Error('Timeout limit error!'));
+                    }, timeout);
+                });
+            },
+
+            /**
+             * @name app.utils#importAccountByIframe
+             * @param {string} origin
+             * @param {number} timeout
+             * @return {Promise<T>}
+             */
+            importAccountByIframe(origin, timeout) {
+
+                /**
+                 * @type {HTMLIFrameElement}
+                 */
+                const iframe = document.createElement('iframe');
+                const remove = () => {
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                };
+                const onError = (error) => {
+                    remove();
+                    return Promise.reject(error);
+                };
+                const onSuccess = (data) => {
+                    remove();
+                    return Promise.resolve(data);
+                };
+
+                iframe.src = `${origin}/export.html`;
+
+                const result = utils.loadOrTimeout(iframe, timeout)
+                    .then(() => utils.importUsersByWindow(iframe.contentWindow, origin, timeout))
+                    .then(onSuccess)
+                    .catch(onError);
+
+                iframe.style.opacity = '0';
+                iframe.style.position = 'absolute';
+                iframe.style.left = '0';
+                iframe.style.top = '0';
+                document.body.appendChild(iframe);
+
+                return result;
+            },
+
+            /**
+             * @name app.utils#importAccountByTab
+             * @param {string} origin
+             * @param {number} timeout
+             * @return {Promise<T>}
+             */
+            importAccountByTab(origin, timeout) {
+                const width = 'width=100';
+                const height = 'height=100';
+                const left = `left=${Math.floor(screen.width - 100 / 2)}`;
+                const right = `top=${Math.floor(screen.height - 100 / 2)}`;
+                let closed = false;
+
+                const close = d => {
+                    if (!closed) {
+                        win.close();
+                        closed = true;
+                    }
+                    return d;
+                };
+
+                const win = window.open(
+                    `${origin}/export.html`,
+                    'export',
+                    `${width},${height},${left},${top},${right},no,no,no,no,no,no`
+                );
+
+                const onError = (e) => {
+                    close();
+                    return Promise.reject(e);
+                };
+
+                return utils.importUsersByWindow(win, origin, timeout)
+                    .then(close)
+                    .catch(onError);
+            },
+
+            /**
+             * @name app.utils#onExportUsers
+             * @param origin
+             * @param resolve
+             * @returns {Function}
+             */
+            onExportUsers(origin, resolve) {
+                return (response) => {
+                    if (!response) {
+                        return [];
+                    }
+
+                    if (origin === WavesApp.betaOrigin) {
+                        resolve(response);
+                    } else {
+                        resolve(response.accounts && response.accounts.map(utils.remapOldClientAccounts) || []);
+                    }
+                };
+            },
+
+            /**
+             * @name app.utils#openDex
+             * @param {string} asset1
+             * @param {string} [asset2]
+             */
+            openDex(asset1, asset2) {
+                /**
+                 * @type {$state}
+                 */
+                const $state = $injector.get('$state');
+                if (asset1 && asset2) {
+                    if (asset1 === asset2) {
+                        return utils.openDex(asset1);
+                    }
+                    setTimeout(() => {
+                        $state.go('main.dex', { assetId1: asset1, assetId2: asset2 });
+                    }, 50);
+                    return null;
+                }
+                if (asset1 === WavesApp.defaultAssets.WAVES) {
+                    asset2 = WavesApp.defaultAssets.BTC;
+                } else {
+                    asset2 = WavesApp.defaultAssets.WAVES;
+                }
+                setTimeout(() => {
+                    $state.go('main.dex', { assetId1: asset1, assetId2: asset2 });
+                }, 50);
             },
 
             /**
@@ -368,35 +603,43 @@
                 const formatted = this.getNiceNumber(bigNum, precision);
 
                 if (shortMode && bigNum.gte(10000)) {
-                    /**
-                     * @type {app.i18n}
-                     */
-                    const i18n = $injector.get('i18n');
-                    let stringNum;
-                    let postfix;
-
-                    if (bigNum.gte(1000000)) {
-                        stringNum = bigNum.div(1000000).toFormat(1);
-                        postfix = i18n.translate('number.short.million');
-                    } else {
-                        stringNum = bigNum.div(1000).toFormat(1);
-                        postfix = i18n.translate('number.short.thousand');
-                    }
-
-                    return `${stringNum}${postfix}`;
+                    return this.getNiceBigNumberTemplate(bigNum);
                 } else {
                     const separatorDecimal = WavesApp.getLocaleData().separators.decimal;
                     const [int, decimal] = formatted.split(separatorDecimal);
                     if (decimal) {
-                        const decimalTpl = _processDecimal(decimal);
+                        const decimalTpl = _processDecimal(decimal, separatorDecimal);
                         return (
-                            `<span class="int">${int}${separatorDecimal}</span>` +
+                            `<span class="int">${int}</span>` +
                             `<span class="decimal">${decimalTpl}</span>`
                         );
                     } else {
                         return `<span class="int">${int}</span>`;
                     }
                 }
+            },
+
+            /**
+             * @param bigNum
+             * @returns {string}
+             */
+            getNiceBigNumberTemplate: function (bigNum) {
+                /**
+                 * @type {app.i18n}
+                 */
+                const i18n = $injector.get('i18n');
+                let stringNum;
+                let postfix;
+
+                if (bigNum.gte(1000000)) {
+                    stringNum = bigNum.div(1000000).toFormat(1);
+                    postfix = i18n.translate('number.short.million');
+                } else {
+                    stringNum = bigNum.div(1000).toFormat(1);
+                    postfix = i18n.translate('number.short.thousand');
+                }
+
+                return `${stringNum}${postfix}`;
             },
 
             /**
@@ -511,10 +754,141 @@
             },
 
             /**
+             * @name app.utils#filterOrderBookByCharCropRate
+             * @param {object} data
+             * @param {number} data.chartCropRate
+             * @param {Array<{price: string}>} data.asks
+             * @param {Array<{price: string}>} data.bids
+             * @return {{bids: Array, asks: Array}}
+             */
+            filterOrderBookByCharCropRate(data) {
+                const { min, max } = this.getOrderBookRangeByCropRate(data);
+
+                if (!min || !max) {
+                    return {
+                        bids: [],
+                        asks: []
+                    };
+                }
+
+                return {
+                    asks: data.asks.filter((ask) => new BigNumber(ask.price).lte(max)),
+                    bids: data.bids.filter((bid) => new BigNumber(bid.price).gte(min))
+                };
+            },
+
+            /**
+             * @name app.utils#cache
+             * @param {Object} storage
+             * @param {function} fetch
+             * @param {function} toId
+             * @param {number} time
+             * @param {function} fromList
+             */
+            cache: (storage, fetch, toId, time, fromList) => (data) => {
+                const list = utils.toArray(data);
+                const toRequest = [];
+                const promiseList = [];
+
+                list.forEach((item) => {
+                    const id = toId(item);
+                    if (storage[id]) {
+                        promiseList.push(storage[id].then(fromList(item)));
+                    } else {
+                        toRequest.push(item);
+                    }
+                });
+
+                let promise;
+                if (toRequest.length) {
+                    promise = fetch(toRequest);
+                    toRequest.forEach((item) => {
+                        const id = toId(item);
+                        storage[id] = promise;
+                        setTimeout(() => {
+                            delete storage[id];
+                        }, time);
+                    });
+                } else {
+                    return Promise.all(promiseList);
+                }
+
+                return Promise.all([promise, ...promiseList])
+                    .then((...list) => list.reduce((acc, i) => acc.concat(...i), []));
+            },
+
+            /**
+             * @name app.utils#filterOrderBookByCharCropRate
+             * @param {object} data
+             * @param {number} data.chartCropRate
+             * @param {Array<{price: string}>} data.asks
+             * @param {Array<{price: string}>} data.bids
+             * @return {{min: BigNumber, max: BigNumber}}
+             */
+            getOrderBookRangeByCropRate(data) {
+                if (!data.asks || !data.asks.length || !data.bids || !data.bids.length) {
+                    return {
+                        min: null,
+                        max: null
+                    };
+                }
+
+                const spreadPrice = new BigNumber(data.asks[0].price)
+                    .plus(data.bids[0].price)
+                    .div(2);
+                const delta = spreadPrice.times(data.chartCropRate).div(2);
+                const max = spreadPrice.plus(delta);
+                const min = BigNumber.max(0, spreadPrice.minus(delta));
+
+                return { min, max };
+            },
+
+            /**
+             * @name app.utils#chainCall
+             * @param {function[]} functionList
+             * @return {Promise<void>}
+             */
+            chainCall(functionList) {
+                return new Promise((resolve, reject) => {
+                    const callList = functionList.slice().reverse();
+
+                    const apply = () => {
+                        if (callList.length) {
+                            const func = callList.pop();
+                            const result = func();
+                            if (result && result.then && typeof result.then === 'function') {
+                                result.then(apply, reject);
+                            } else {
+                                apply();
+                            }
+                        } else {
+                            resolve();
+                        }
+                    };
+
+                    apply();
+                });
+            },
+
+            /**
              * @name app.utils#comparators
              */
             comparators: {
                 asc: function (a, b) {
+                    if (a == null) {
+                        if (b == null) {
+                            return 0;
+                        } else {
+                            return -1;
+                        }
+                    } else if (b == null) {
+                        if (a == null) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    }
+
                     if (a > b) {
                         return 1;
                     }
@@ -526,6 +900,20 @@
                     return -1;
                 },
                 desc: function (a, b) {
+                    if (a == null) {
+                        if (b == null) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    } else if (b == null) {
+                        if (a == null) {
+                            return 0;
+                        } else {
+                            return -1;
+                        }
+                    }
+
                     if (a > b) {
                         return -1;
                     }
@@ -560,6 +948,34 @@
                         return 1;
                     }
                 },
+                money: {
+                    asc: function (a, b) {
+                        return utils.comparators.bigNumber.asc(a.getTokens(), b.getTokens());
+                    },
+                    desc: function (a, b) {
+                        return utils.comparators.bigNumber.desc(a.getTokens(), b.getTokens());
+                    }
+                },
+                smart: {
+                    asc: function (a, b) {
+                        if (a instanceof ds.wavesDataEntities.Money && b instanceof ds.wavesDataEntities.Money) {
+                            return utils.comparators.money.asc(a, b);
+                        } else if (a instanceof BigNumber && b instanceof BigNumber) {
+                            return utils.comparators.bigNumber.asc(a, b);
+                        }
+
+                        return utils.comparators.asc(a, b);
+                    },
+                    desc: function (a, b) {
+                        if (a instanceof ds.wavesDataEntities.Money && b instanceof ds.wavesDataEntities.Money) {
+                            return utils.comparators.money.desc(a, b);
+                        } else if (a instanceof BigNumber && b instanceof BigNumber) {
+                            return utils.comparators.bigNumber.desc(a, b);
+                        }
+
+                        return utils.comparators.desc(a, b);
+                    }
+                },
                 process(processor) {
                     return {
                         asc: (a, b) => utils.comparators.asc(processor(a), processor(b)),
@@ -567,9 +983,33 @@
                         bigNumber: {
                             asc: (a, b) => utils.comparators.bigNumber.asc(processor(a), processor(b)),
                             desc: (a, b) => utils.comparators.bigNumber.desc(processor(a), processor(b))
+                        },
+                        money: {
+                            asc: (a, b) => utils.comparators.money.asc(processor(a), processor(b)),
+                            desc: (a, b) => utils.comparators.money.desc(processor(a), processor(b))
+                        },
+                        smart: {
+                            asc: (a, b) => utils.comparators.smart.asc(processor(a), processor(b)),
+                            desc: (a, b) => utils.comparators.smart.desc(processor(a), processor(b))
                         }
                     };
                 }
+            },
+
+            /**
+             * @name app.utils#remapOldClientAccounts
+             * @param account
+             * @returns {{address: *, encryptedSeed: *, settings: {encryptionRounds: number}}}
+             */
+            remapOldClientAccounts(account) {
+                return {
+                    name: account.name,
+                    address: account.address,
+                    encryptedSeed: account.cipher,
+                    settings: {
+                        encryptionRounds: 1000
+                    }
+                };
             },
 
             /**
@@ -595,7 +1035,13 @@
             return openIndex !== -1 && closeIndex !== -1 && openIndex < closeIndex;
         }
 
-        function _processDecimal(decimal) {
+        /**
+         * @param {string} decimal
+         * @param {string} separator
+         * @return {string}
+         * @private
+         */
+        function _processDecimal(decimal, separator) {
             const mute = [];
             decimal.split('')
                 .reverse()
@@ -607,7 +1053,10 @@
                     return true;
                 });
             const end = decimal.length - mute.length;
-            return `${decimal.substr(0, end)}<span class="decimal-muted">${mute.join('')}</span>`;
+            if (end) {
+                return `${separator}${decimal.substr(0, end)}<span class="decimal-muted">${mute.join('')}</span>`;
+            }
+            return `<span class="decimal-muted">${separator}${mute.join('')}</span>`;
         }
 
         function _getObserver(target) {
@@ -649,7 +1098,7 @@
 
         function isNotEqualValue(oldValue, newValue) {
             if (typeof oldValue === typeof newValue) {
-                if (oldValue instanceof Waves.Money && newValue instanceof Waves.Money) {
+                if (oldValue instanceof dataEntities.Money && newValue instanceof dataEntities.Money) {
                     return oldValue.asset.id !== newValue.asset.id || oldValue.toTokens() !== newValue.toTokens();
                 } else if (oldValue instanceof BigNumber && newValue instanceof BigNumber) {
                     return !oldValue.eq(newValue);
@@ -662,6 +1111,19 @@
             } else {
                 return true;
             }
+        }
+
+        function _getOriginalDescriptor(target, key) {
+            const descriptor = Object.getOwnPropertyDescriptor(target, key);
+
+            if (descriptor) {
+                return descriptor;
+            }
+
+            if (target.constructor && target.constructor !== Object.constructor && target.constructor.prototype) {
+                return Object.getOwnPropertyDescriptor(target.constructor.prototype, key);
+            }
+            return null;
         }
 
         function _addObserverSignals(target, keys, options) {
@@ -678,20 +1140,46 @@
                     item.signal = new tsUtils.Signal();
                     item.timer = null;
                     item.value = target[key];
+
+                    const originalDescriptor = _getOriginalDescriptor(target, key);
                     observer[key] = item;
 
-                    Object.defineProperty(target, key, {
-                        enumerable: true,
-                        get: () => observer[key].value,
-                        set: (value) => {
-                            value = options.set ? options.set(value) : value;
-                            const prev = observer[key].value;
-                            if (isNotEqualValue(prev, value)) {
-                                observer[key].value = value;
-                                observer[key].signal.dispatch({ value, prev });
-                            }
+                    if (originalDescriptor && originalDescriptor.get) {
+
+                        const descriptor = {
+                            enumerable: originalDescriptor.enumerable,
+                            get: originalDescriptor.get
+                        };
+
+                        if (originalDescriptor.set) {
+                            descriptor.set = (value) => {
+                                const prev = originalDescriptor.get.call(target);
+                                if (isNotEqualValue(prev, value)) {
+                                    originalDescriptor.set.call(target, value);
+                                    observer[key].signal.dispatch({ value, prev });
+                                }
+                            };
+                        } else {
+                            descriptor.set = () => {
+                                throw new Error('Original descriptor has\'t set property!');
+                            };
                         }
-                    });
+
+                        Object.defineProperty(target, key, descriptor);
+                    } else {
+                        Object.defineProperty(target, key, {
+                            enumerable: true,
+                            get: () => observer[key].value,
+                            set: (value) => {
+                                value = options.set ? options.set(value) : value;
+                                const prev = observer[key].value;
+                                if (isNotEqualValue(prev, value)) {
+                                    observer[key].value = value;
+                                    observer[key].signal.dispatch({ value, prev });
+                                }
+                            }
+                        });
+                    }
                 });
 
             return _getSignal(observer, keys);

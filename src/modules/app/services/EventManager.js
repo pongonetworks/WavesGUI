@@ -104,12 +104,12 @@
                     }
                     // utils.when(this._waves.node.transactions.get(id)) // TODO : UTX problems
                     //     .then((tx) => {
-                    //         notificationManager.info({
+                    //         notification.info({
                     //             ns: 'app.ui',
                     //             title: { literal: 'Transaction finished success!' }
                     //         });
                     //     }, (error) => {
-                    //         notificationManager.error({
+                    //         notification.error({
                     //             ns: 'app.ui',
                     //             title: { literal: 'Transaction finished error!' }
                     //         });
@@ -166,7 +166,7 @@
 
             static _getMoneyListData(tx) {
                 const moneyList = [tx.fee];
-                if (tx.type === Waves.constants.TRANSFER_TX) {
+                if (tx.type === 4) {
                     moneyList.push(tx.amount);
                 }
                 return moneyList;

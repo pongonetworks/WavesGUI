@@ -6,11 +6,10 @@
      * @param {User} user
      * @param i18n
      * @param {Waves} waves
-     * @param {Function} createPoll
      * @param {app.utils} utils
      * @return {TransactionList}
      */
-    const controller = function (Base, user, i18n, waves, createPoll, utils) {
+    const controller = function (Base, user, i18n, waves, utils) {
 
         class TransactionList extends Base {
 
@@ -30,6 +29,10 @@
                 this.pending = false;
 
                 this.observe('_transactions', this._onChangeTransactions);
+            }
+
+            $postLink() {
+                this.parentSelector = this.parentSelector || 'ul';
             }
 
             /**
@@ -68,7 +71,6 @@
         'user',
         'i18n',
         'waves',
-        'createPoll',
         'utils'
     ];
 
@@ -76,6 +78,7 @@
         .component('wTransactionList', {
             bindings: {
                 transactionDatePattern: '@',
+                parentSelector: '@',
                 pending: '<',
                 _transactions: '<transactions'
             },

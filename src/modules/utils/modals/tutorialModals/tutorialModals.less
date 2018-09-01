@@ -1,4 +1,5 @@
-@import (reference) '../../../config';
+@import (reference) 'config';
+@import (reference) 'icons';
 @import (reference) '../../../app/less/typography';
 
 .icon-information {
@@ -6,12 +7,52 @@
   display: block;
   right: 141px;
   top: 43px;
-  background: url(/img/icons/icon-info.svg) center no-repeat;
+  background: @information-icon center no-repeat;
   width: 16px;
   height: 16px;
 }
 
-.icon-information-tooltip {
+.cell {
+  background-repeat: no-repeat;
+}
+
+.cell-001 {
+ background: @modal-anonymus-icon no-repeat;
+}
+
+.cell-002 {
+  background: @modal-password-icon no-repeat;
+}
+.cell-003 {
+  background: @modal-backup-icon no-repeat;
+}
+.cell-004 {
+  background: @modal-paper-icon no-repeat;
+}
+
+.cell-005 {
+  background: @modal-url-icon no-repeat;
+}
+.cell-006 {
+  background: @modal-plugin-icon no-repeat;
+}
+.cell-007 {
+  background: @modal-mail-icon no-repeat;
+}
+.cell-008 {
+  background: @modal-refresh-icon no-repeat;
+}
+.cell-009 {
+  background: @modal-os-icon no-repeat;
+}
+.cell-010 {
+  background: @modal-wifi-icon no-repeat;
+}
+
+
+
+
+.tooltip {
   display: none;
   position: absolute;
   padding: 0 10px;
@@ -56,15 +97,23 @@
   }
 }
 
-.icon-information:hover + .icon-information-tooltip {
+.icon-information:hover + .tooltip {
   display: inline-block;
 }
 
 body md-dialog.tutorial-modals {
 
   .icon-close {
-    display: none;
     z-index: 120;
+    display: block;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 36px;
+    height: 36px;
+    background-size: 16px 16px;
+    background-repeat: no-repeat;
+    background-position: center;
   }
 
   .mobile-only {
@@ -104,9 +153,7 @@ body md-dialog.tutorial-modals {
     width: 780px;
     min-width: 780px;
     max-height: 96vh;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
+    top: auto;
 
     md-dialog-content {
       padding: 20px 60px 0px;
@@ -160,18 +207,6 @@ body md-dialog.tutorial-modals {
       display: block;
     }
 
-    .icon-close {
-      display: block;
-      position: absolute;
-      right: 10px;
-      top: 10px;
-      width: 36px;
-      height: 36px;
-      background-size: 16px 16px;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
     img.computer {
       position: relative;
       margin: 0 auto 20px auto;
@@ -216,7 +251,7 @@ body md-dialog.tutorial-modals {
     left: 20px;
   }
 
-  .icon-information-tooltip {
+  .tooltip {
     width: 36px;
     right: auto;
     left: 10px;

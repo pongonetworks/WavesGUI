@@ -1,11 +1,12 @@
-@import (reference) '../../../../../config';
+@import (reference) 'config';
+@import (reference) '../../../../../app/less/typography';
 
 w-leasing-block {
   display: block;
   width: 100%;
   border-radius: @border-radius;
   background-color: @color-white;
-  border: 1px solid @color-disabled-200;
+  box-shadow: @shadow-type-1;
 
   .leasing-block-title {
     display: flex;
@@ -21,11 +22,32 @@ w-leasing-block {
     padding: 20px;
 
     .balance-container {
-      // h1 mixin
-      font-family: @font-roboto-medium;
       font-size: 28px;
-      letter-spacing: 0;
       line-height: 34px;
+      font-weight: normal;
+
+      .int {
+        font-family: @font-roboto-regular;
+      }
+      .decimal {
+        font-family: @font-roboto-light;
+      }
     }
+  }
+
+  &.noheader {
+    .leasing-block-title {
+      border-bottom: 0 none;
+      padding: 0 20px;
+      height: 20px;
+      justify-content: center;
+      font-weight: normal;
+      font-family: @font-roboto-regular;
+    }
+
+    .leasing-block-content {
+      padding-top: 0;
+    }
+
   }
 }

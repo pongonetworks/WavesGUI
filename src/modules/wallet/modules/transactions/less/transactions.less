@@ -1,6 +1,11 @@
-@import (reference) '../../../../config';
+@import (reference) 'config';
+@import (reference) 'icons';
 
 .transactions {
+
+  w-radio-wrap {
+    flex-grow: 1;
+  }
 
   .transactions-content {
     display: flex;
@@ -10,13 +15,15 @@
     .controls {
       display: flex;
       flex-direction: row;
-      align-items: center;
       justify-content: space-between;
-      margin: 6px 0 16px;
-      min-height: 32px;
+      min-height: 42px;
 
       .btn-wrap.btn-group {
+        justify-content: flex-start;
         padding: 0;
+        align-items: center;
+        height: 42px;
+
         .btn.btn-radio {
           font-size: 15px;
           font-family: @font-roboto-medium;
@@ -29,13 +36,18 @@
     display: none;
   }
 
+  w-select.tx-filter {
+    margin-right: 10px;
+    flex-grow: 0;
+    white-space: nowrap;
+  }
+
   button.download {
-    background: url(/img/icons/download.svg) 20px center no-repeat @color-white;
-    padding-left: 40px;
+    flex-grow: 0;
   }
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1024px) {
   .transactions {
     w-radio-wrap.split-mode {
       display: none;
@@ -45,10 +57,21 @@
       display: block;
       width: 100%;
       margin-right: 10px;
-      background: @color-white;
+    }
 
-      .title {
+    w-button {
+      & > *.interface svg {
+        margin-left: 0;
+        margin-right: 0;
+      }
+      button.download {
+        width: 42px;
         height: 42px;
+        padding: 0;
+        background-position: center;
+        span {
+          display: none;
+        }
       }
     }
   }

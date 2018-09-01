@@ -4,7 +4,7 @@
     /**
      * @param Base
      * @param {object} $attrs
-     * @param {function} createPoll
+     * @param {IPollCreate} createPoll
      * @param {JQuery} $element
      * @param {Waves} waves
      * @return {Change24}
@@ -68,7 +68,7 @@
             _getChange() {
                 if (this.assetFrom && this.assetTo) {
                     if (this.directionByPair) {
-                        return Waves.AssetPair.get(this.assetFrom, this.assetTo).then((pair) => {
+                        return ds.api.pairs.get(this.assetFrom, this.assetTo).then((pair) => {
                             return waves.utils.getChange(pair.amountAsset.id, pair.priceAsset.id);
                         });
                     }
@@ -84,6 +84,8 @@
              */
             _setChange(data) {
                 if (typeof data === 'number') {
+                    $element.toggleClass('green', data > 0);
+                    $element.toggleClass('red', data < 0);
                     $element.html(data.toFixed(this.precision));
                 } else {
                     $element.html('—');

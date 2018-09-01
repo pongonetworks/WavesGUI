@@ -3,15 +3,13 @@
         <li class="transaction-item" ng-repeat="data in $ctrl.transactions track by data.date">
             <div class="date tag-2 info-400">{{ ::data.timestamp | date:'MMM, d, yyyy' }}</div>
             <div class="row" ng-repeat="transaction in data.transactions track by transaction.id">
-                <w-transaction date-pattern="{{::$ctrl.transactionDatePattern}}"
-                               transaction="transaction"></w-transaction>
+                <w-visible scroll-root-selector="{{::$ctrl.parentSelector}}">
+                    <w-transaction date-pattern="{{::$ctrl.transactionDatePattern}}"
+                                   transaction="transaction"></w-transaction>
+                </w-visible>
             </div>
         </li>
     </ul>
-    <div ng-if="!$ctrl.pending && !$ctrl.transactions.length" class="empty-block-container">
-        <div class="icon"></div>
-        <div class="body-1 basic-700" w-i18n="transactionList.noTransactionsTitle"></div>
-        <div class="footnote-1 basic-500 margin-4" w-i18n="transactionList.noTransactionsDescription"></div>
-    </div>
+    <w-empty-block ng-if="!$ctrl.pending && !$ctrl.transactions.length"></w-empty-block>
     <w-loader ng-if="$ctrl.pending"></w-loader>
 </div>

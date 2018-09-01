@@ -9,12 +9,14 @@
      */
     const factory = function (assets, utils, decorators) {
 
+        const ds = require('data-service');
+        const entities = require('@waves/data-entities');
+
         class WavesUtils {
 
             @decorators.cachable(5)
             searchAsset(userInput) {
-                return fetch(`${WavesApp.network.api}/assets/search/${userInput}`)
-                    .then(utils.onFetch);
+                return ds.fetch(`${WavesApp.network.api}/assets/search/${userInput}`);
             }
 
             /**
@@ -24,14 +26,14 @@
              * @param {Date|number|Moment} [date] timestamp or Date
              * @return {Promise<BigNumber>}
              */
-            @decorators.cachable(60)
+            @decorators.cachable(350)
             getRate(assetFrom, assetTo, date) {
                 const WavesId = WavesApp.defaultAssets.WAVES;
                 const from = WavesUtils.toId(assetFrom);
                 const to = WavesUtils.toId(assetTo);
 
                 if (from === to) {
-                    return utils.when(new BigNumber(1));
+                    return Promise.resolve(new BigNumber(1));
                 }
 
                 if (date) {
@@ -53,14 +55,13 @@
              * Get api for current balance from another balance
              * @param {string|Asset} assetFrom
              * @param {string|Asset} assetTo
-             * @param {Date|number} [date] timestamp or Date
              * @return {Promise<WavesUtils.rateApi>}
              */
-            getRateApi(assetFrom, assetTo, date) {
+            getRateApi(assetFrom, assetTo) {
                 return utils.whenAll([
-                    assets.info(WavesUtils.toId(assetFrom)),
-                    assets.info(WavesUtils.toId(assetTo)),
-                    this.getRate(assetFrom, assetTo, date)
+                    assets.getAsset(WavesUtils.toId(assetFrom)),
+                    assets.getAsset(WavesUtils.toId(assetTo)),
+                    this.getRate(assetFrom, assetTo)
                 ])
                     .then(([from, to, rate]) => {
                         return this._generateRateApi(from, to, rate);
@@ -74,7 +75,7 @@
              * @param {Date|number|Moment} [to]
              * @return {Promise<{rate: number, timestamp: Date}[]>}
              */
-            @decorators.cachable(10)
+            @decorators.cachable(60)
             getRateHistory(assetFrom, assetTo, from, to) {
                 const idFrom = WavesUtils.toId(assetFrom);
                 const idTo = WavesUtils.toId(assetTo);
@@ -82,7 +83,7 @@
                 to = to || Date.now();
 
                 if (idFrom === idTo) {
-                    return utils.when([]);
+                    return Promise.resolve([]);
                 } else if (idFrom === wavesId || idTo === wavesId) {
                     return this._getRateHistory(idFrom, idTo, utils.moment(from), utils.moment(to));
                 } else {
@@ -114,7 +115,7 @@
             /**
              * @param {string|Asset} assetFrom
              * @param {string|Asset} assetTo
-             * @return {Promise<number>}
+             * @return {Promise<BigNumber>}
              */
             @decorators.cachable(60)
             getChange(assetFrom, assetTo) {
@@ -122,39 +123,23 @@
                 const idTo = WavesUtils.toId(assetTo);
 
                 if (idFrom === idTo) {
-                    return Promise.resolve(1);
+                    return Promise.resolve(new BigNumber(0));
                 }
 
                 return this._getChange(idFrom, idTo);
             }
 
             /**
-             * @param {Moment} from
-             * @private
+             * @param pair
+             * @returns {Promise<string>}
              */
-            _getChangeByInterval(from) {
-                const MINUTE_TIME = 1000 * 60;
-                const INTERVALS = [5, 15, 30, 60, 240, 1440];
-                const MAX_COUNTS = 100;
-
-                const intervalMinutes = (Date.now() - from.getDate()) / MINUTE_TIME;
-
-                let interval, i = 0;
-                do {
-                    if ((intervalMinutes / INTERVALS[i]) < MAX_COUNTS) {
-                        interval = INTERVALS[i];
-                    } else {
-                        i++;
-                    }
-                } while (!interval && INTERVALS[i]);
-
-                if (!interval) {
-                    interval = INTERVALS[INTERVALS.length - 1];
-                }
-
-                const count = Math.min(Math.floor(intervalMinutes / interval), MAX_COUNTS);
-
-                return `${interval}/${count}`;
+            @decorators.cachable(60)
+            getVolume(pair) {
+                return ds.api.pairs.info(pair)
+                    .then((data) => {
+                        const [pair = {}] = data.filter(Boolean);
+                        return pair && String(pair.volume) || '0';
+                    });
             }
 
             /**
@@ -164,33 +149,32 @@
              * @private
              */
             _getChange(from, to) {
-                return Waves.AssetPair.get(from, to)
+                const getChange = (open, close) => {
+                    if (open.eq(0)) {
+                        return new BigNumber(0);
+                    } else {
+                        return close.minus(open).div(open).times(100).dp(2);
+                    }
+                };
+
+                return ds.api.pairs.get(from, to)
                     .then((pair) => {
-                        const interval = this._getChangeByInterval(utils.moment().add().day(-1));
-                        return fetch(`${WavesApp.network.datafeed}/api/candles/${pair.toString()}/${interval}`)
-                            .then(utils.onFetch)
-                            .then((data) => {
+                        return ds.api.pairs.info(pair)
+                            .catch(() => null)
+                            .then(([data]) => {
 
                                 if (!data || data.status === 'error') {
                                     return 0;
                                 }
 
-                                data = data.filter(({ open, close }) => Number(open) !== 0 && Number(close) !== 0)
-                                    .sort(utils.comparators.process(({ timestamp }) => timestamp).asc);
-
-                                if (!data.length) {
-                                    return 0;
-                                }
-
-                                const open = Number(data[0].open);
-                                const close = Number(data[data.length - 1].close);
-
-                                const percent = open ? ((close - open) / open * 100) : 0;
+                                const open = data.firstPrice || new entities.Money(0, pair.priceAsset);
+                                const close = data.lastPrice || new entities.Money(0, pair.priceAsset);
+                                const change24 = getChange(open.getTokens(), close.getTokens()).toNumber();
 
                                 if (pair.amountAsset.id === from) {
-                                    return percent;
+                                    return change24;
                                 } else {
-                                    return -percent;
+                                    return -change24;
                                 }
                             });
                     });
@@ -208,7 +192,7 @@
                     return (
                         trades
                             .reduce((result, item) => {
-                                return result.add(new BigNumber(item.price));
+                                return result.plus(new BigNumber(item.price.getTokens()));
                             }, new BigNumber(0))
                             .div(trades.length)
                     );
@@ -218,10 +202,13 @@
                     return trades && trades.length ? calculateCurrentRate(trades) : new BigNumber(0);
                 };
 
-                return Waves.AssetPair.get(fromId, toId)
+                return ds.api.pairs.get(fromId, toId)
                     .then((pair) => {
-                        return fetch(`${WavesApp.network.datafeed}/api/trades/${pair.toString()}/5`)
-                            .then(utils.onFetch)
+                        return ds.api.transactions.getExchangeTxList({
+                            limit: 5,
+                            amountAsset: pair.amountAsset,
+                            priceAsset: pair.priceAsset
+                        })
                             .then(currentRate)
                             .then((rate) => {
                                 if (fromId !== pair.priceAsset.id) {
@@ -243,31 +230,39 @@
              * @private
              */
             _getRateHistory(fromId, toId, from, to) {
-                const interval = this._getChangeByInterval(from);
-                return Waves.AssetPair.get(fromId, toId)
+                const minuteTime = 1000 * 60;
+                const interval = Math.round((to.getDate().getTime() - from.getDate().getTime()) / (200 * minuteTime));
+
+                return ds.api.pairs.get(fromId, toId)
                     .then((pair) => {
-                        return fetch(`${WavesApp.network.datafeed}/api/candles/${pair.toString()}/${interval}`)
-                            .then(utils.onFetch)
-                            .then((list) => {
+                        const amountId = pair.amountAsset.id;
+                        const priceId = pair.priceAsset.id;
+                        const path = `${WavesApp.network.api}/candles/${amountId}/${priceId}`;
+
+                        return ds.fetch(`${path}?timeStart=${from}&timeEnd=${to}&interval=${interval}m`)
+                            .then((data) => {
+                                const list = data.candles;
 
                                 if (!list || !list.length) {
                                     return Promise.reject(list);
                                 }
 
-                                return list.reduce((result, item) => {
+                                const result = [];
+
+                                list.forEach((item) => {
                                     const close = Number(item.close);
                                     const rate = fromId !== pair.priceAsset.id ? close : 1 / close;
 
                                     if (close !== 0) {
                                         result.push({
-                                            timestamp: new Date(item.timestamp),
+                                            timestamp: new Date(item.time),
                                             rate: rate
                                         });
                                     }
+                                });
 
-                                    return result.filter((item) => item.timestamp > from && item.timestamp < to)
-                                        .sort(utils.comparators.process(({ timestamp }) => timestamp).asc);
-                                }, []);
+                                return result.filter((item) => item.timestamp > from && item.timestamp < to)
+                                    .sort(utils.comparators.process(({ timestamp }) => timestamp).asc);
                             });
                     });
             }
@@ -287,8 +282,8 @@
                      * @return {BigNumber}
                      */
                     exchange(balance) {
-                        return balance.mul(rate.toFixed(8))
-                            .round(to.precision);
+                        return balance.times(rate.toFixed(8))
+                            .dp(to.precision);
                     },
 
                     /**
@@ -297,7 +292,7 @@
                      * @return {BigNumber}
                      */
                     exchangeReverse(balance) {
-                        return (rate ? balance.div(rate) : new BigNumber(0)).round(from.precision);
+                        return (rate ? balance.div(rate) : new BigNumber(0)).dp(from.precision);
                     },
 
                     /**

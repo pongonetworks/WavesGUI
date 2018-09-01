@@ -6,9 +6,10 @@
      * @param Base
      * @param {Waves} waves
      * @param {User} user
+     * @param {$rootScope.Scope} $scope
      * @returns {ConfirmGatewayTransaction}
      */
-    const controller = function (Base, waves, user) {
+    const controller = function (Base, waves, user, $scope) {
 
         class ConfirmGatewayTransaction extends Base {
 
@@ -19,21 +20,27 @@
             }
 
             confirm() {
-                return user.getSeed().then(({ keyPair }) => {
+                const timestamp = ds.utils.normalizeTime(this.tx.timestamp || Date.now());
 
-                    let amount = this.tx.amount;
-                    amount = amount.cloneWithTokens(amount.getTokens().add(this.gatewayDetails.gatewayFee));
+                let amount = this.tx.amount;
+                amount = amount.cloneWithTokens(amount.getTokens().plus(this.gatewayDetails.gatewayFee));
 
-                    waves.node.assets.transfer({ ...this.tx, amount, keyPair }).then(({ id }) => {
+                return ds.prepareForBroadcast(4, { ...this.tx, amount, timestamp }).then((preparedTx) => {
+                    return ds.broadcast(preparedTx).then(({ id }) => {
                         this.tx.id = id;
                         this.step++;
-                        analytics.push('Gateway', 'Gateway.Send', 'Gateway.Send.Success', this.tx.amount);
-                    }).catch((e) => {
-                        console.error(e);
-                        console.error('Gateway transaction error!');
-                        analytics.push('Gateway', 'Gateway.Send', 'Gateway.Send.Error', this.tx.amount);
+                        analytics.push(
+                            'Gateway', `Gateway.Send.${WavesApp.type}`,
+                            `Gateway.Send.${WavesApp.type}.Success`, this.tx.amount);
+                        $scope.$apply();
                     });
-
+                }).catch((e) => {
+                    console.error(e);
+                    console.error('Gateway transaction error!');
+                    analytics.push(
+                        'Gateway', `Gateway.Send.${WavesApp.type}`,
+                        `Gateway.Send.${WavesApp.type}.Error`, this.tx.amount);
+                    $scope.$apply();
                 });
             }
 
@@ -42,7 +49,7 @@
         return new ConfirmGatewayTransaction();
     };
 
-    controller.$inject = ['Base', 'waves', 'user'];
+    controller.$inject = ['Base', 'waves', 'user', '$scope'];
 
     angular.module('app.ui').component('wConfirmGatewayTransaction', {
         bindings: {

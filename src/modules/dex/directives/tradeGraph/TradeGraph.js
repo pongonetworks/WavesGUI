@@ -10,15 +10,15 @@
             dataset: ORDERS_TYPES.asks,
             key: 'amount',
             label: 'Asks',
-            color: '#f27057',
-            type: ['line', 'line', 'area']
+            color: '#e5494d', // stakan krasn
+            type: ['line', 'area']
         },
         bids: {
             dataset: ORDERS_TYPES.bids,
             key: 'amount',
             label: 'Bids',
-            color: '#2b9f72',
-            type: ['line', 'line', 'area']
+            color: '#5a81ea', // stakan goluboi
+            type: ['line', 'area']
         }
     };
     const ORDER_LIST_STUB = [{ amount: 0, price: 0 }];
@@ -27,20 +27,28 @@
         bids: 2
     };
 
+    const tsUtils = require('ts-utils');
+
     /**
      * @param Base
      * @param utils
      * @param {Waves} waves
-     * @param {function} createPoll
+     * @param {IPollCreate} createPoll
+     * @param {$rootScope.Scope} $scope
+     * @param {app.utils} utils
      * @return {TradeGraph}
      */
-    const controller = function (Base, utils, waves, createPoll) {
+    const controller = function (Base, utils, waves, createPoll, $scope) {
 
         class TradeGraph extends Base {
 
             constructor() {
                 super();
 
+                /**
+                 * @type {boolean}
+                 */
+                this.loadingError = false;
                 /**
                  * @type {{amount: string, price: string}}
                  * @private
@@ -52,18 +60,28 @@
                  * @private
                  */
                 this._chartCropRate = null;
+                /**
+                 * @type {Signal<void>}
+                 * @private
+                 */
+                this._setDataSignal = new tsUtils.Signal();
 
                 /**
                  * @type {boolean}
                  * @private
                  */
                 this.canShowGraph = false;
+                /**
+                 * @type {boolean}
+                 */
+                this.pending = true;
 
                 this.options = {
                     margin: {
-                        top: 10,
-                        left: 70,
-                        right: 70
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0
                     },
                     grid: {
                         x: false,
@@ -95,13 +113,23 @@
                  * @type {Poll}
                  * @private
                  */
-                this._poll = createPoll(this, this._getOrderBook, this._setOrderBook, 1000);
+                this._poll = createPoll(this, this._getOrderBook, this._setOrderBook, 1000, { $scope });
+
+                this._resetPending();
             }
 
             _onChangeAssets(noRestart) {
                 if (!noRestart) {
                     this._poll.restart();
+                    this._resetPending();
                 }
+            }
+
+            _resetPending() {
+                this.pending = true;
+                this.receiveOnce(this._setDataSignal, () => {
+                    this.pending = false;
+                });
             }
 
             _getOrderBook() {
@@ -110,41 +138,44 @@
                         .getOrderBook(this._assetIdPair.amount, this._assetIdPair.price)
                         .then((orderBook) => this._cutOffOutlyingOrdersIfNecessary(orderBook))
                         .then(TradeGraph._buildCumulativeOrderBook)
+                        .catch(() => {
+                            this.loadingError = true;
+                            this.pending = false;
+                            $scope.$apply();
+                        })
                 );
             }
 
             _setOrderBook(orderBook) {
                 this._updateGraphAccordingToOrderBook(orderBook);
-
                 this.data.asks = orderBook.asks;
                 this.data.bids = orderBook.bids;
+
+                this._setDataSignal.dispatch();
+
+                $scope.$digest();
             }
 
             _cutOffOutlyingOrdersIfNecessary(orderBook) {
-                if (TradeGraph._areEnoughOrders(orderBook)) {
-                    return this._cutOffOutlyingOrders(orderBook);
+                if (TradeGraph._isLackOfAsks(orderBook) || TradeGraph._isLackOfBids(orderBook)) {
+                    return orderBook;
+                }
+
+                const filteredOrderBook = utils.filterOrderBookByCharCropRate({
+                    chartCropRate: this._chartCropRate,
+                    asks: orderBook.asks,
+                    bids: orderBook.bids
+                });
+
+                if (TradeGraph._areEitherAsksOrBids(filteredOrderBook)) {
+                    return filteredOrderBook;
                 }
 
                 return orderBook;
             }
 
-            _cutOffOutlyingOrders({ asks, bids }) {
-                const spreadPrice = new BigNumber(asks[0].price)
-                    .sub(bids[0].price)
-                    .div(2)
-                    .add(bids[0].price);
-                const delta = spreadPrice.mul(this._chartCropRate).div(2);
-                const max = spreadPrice.add(delta);
-                const min = BigNumber.max(0, spreadPrice.sub(delta));
-
-                return {
-                    asks: asks.filter((ask) => new BigNumber(ask.price).lte(max)),
-                    bids: bids.filter((bid) => new BigNumber(bid.price).gte(min))
-                };
-            }
-
             _updateGraphAccordingToOrderBook(orderBook) {
-                if (TradeGraph._areSomeOrdersToShow(orderBook)) {
+                if (TradeGraph._areEitherAsksOrBids(orderBook)) {
                     this._prepareGraphForOrders(orderBook);
                 } else {
                     this._hideGraphAndShowStub();
@@ -156,7 +187,7 @@
             _prepareGraphForOrders(orderBook) {
                 this._showGraphAndHideStub();
 
-                if (TradeGraph._areEnoughOrders(orderBook)) {
+                if (TradeGraph._areEnoughAsks(orderBook) && TradeGraph._areEnoughBids(orderBook)) {
                     this._setGraphToShowAsksAndBids();
                 }
 
@@ -195,18 +226,16 @@
                 this.options.series = seriesOptions;
             }
 
-            static _areSomeOrdersToShow(orderBook) {
-                return !(
-                    TradeGraph._isLackOfAsks(orderBook) &&
-                    TradeGraph._isLackOfBids(orderBook)
-                );
+            static _areEitherAsksOrBids(orderBook) {
+                return TradeGraph._areEnoughAsks(orderBook) || TradeGraph._areEnoughBids(orderBook);
             }
 
-            static _areEnoughOrders(orderBook) {
-                return !(
-                    TradeGraph._isLackOfAsks(orderBook) ||
-                    TradeGraph._isLackOfBids(orderBook)
-                );
+            static _areEnoughAsks(orderBook) {
+                return !TradeGraph._isLackOfAsks(orderBook);
+            }
+
+            static _areEnoughBids(orderBook) {
+                return !TradeGraph._isLackOfBids(orderBook);
             }
 
             static _isLackOfAsks(orderBook) {
@@ -229,12 +258,12 @@
             }
 
             static _buildCumulativeOrderList(list) {
-                let amount = 0;
+                let amount = new BigNumber(0);
 
                 return list.reduce((result, item) => {
-                    amount += Number(item.amount);
+                    amount = amount.plus(new BigNumber(item.amount));
                     result.push({
-                        amount,
+                        amount: Number(amount.toFixed(this._chartCropRate)),
                         price: Number(item.price)
                     });
 
@@ -247,7 +276,7 @@
         return new TradeGraph();
     };
 
-    controller.$inject = ['Base', 'utils', 'waves', 'createPoll'];
+    controller.$inject = ['Base', 'utils', 'waves', 'createPoll', '$scope'];
 
     angular.module('app.dex')
         .component('wDexTradeGraph', {

@@ -1,4 +1,4 @@
-@import (reference) url('../../../config');
+@import (reference) url('config');
 
 md-dialog.account-info {
   md-dialog-content {
@@ -11,8 +11,30 @@ md-dialog.account-info {
         display: flex;
         flex-direction: row;
         align-items: center;
-        height: 54px;
-        padding: 0 30px 0 15px;
+      }
+    }
+
+    w-loader {
+      top: 28px;
+    }
+
+    .help-icon{
+      &__content {
+        margin-bottom: 20px;
+      }
+    }
+
+    .errors-margin {
+      margin-top: @padding-main-layout * 2;
+
+      span {
+        display: block;
+      }
+    }
+
+    w-input-container {
+      .error.active {
+        margin-top: -8px;
       }
     }
 
@@ -31,8 +53,14 @@ md-dialog.account-info {
         &:last-child {
           border-bottom-left-radius: @border-radius;
           border-bottom-right-radius: @border-radius;
-          border-bottom: 1px solid #dae1e9;
+          border-bottom: 1px solid @color-basic-200;
         }
+      }
+
+      .message-warning {
+        border: 1px dashed @color-warning-400;
+        padding: 10px 20px;
+        border-radius: @border-radius;
       }
 
       .alias-list {
@@ -47,9 +75,11 @@ md-dialog.account-info {
 
           w-button {
             display: block;
-          }
-          span {
-            color: #3f536e;
+            & > *:not(.submit) {
+              span {
+                color: @color-basic-900;
+              }
+            }
           }
         }
 
@@ -59,7 +89,11 @@ md-dialog.account-info {
           border-left: 1px solid @color-basic-200;
           border-right: 1px solid @color-basic-200;
           border-top: 1px solid @color-basic-200;
-          border-bottom: none;
+          border-bottom: 1px solid @color-white;
+
+          &:focus {
+            border: 1px solid @color-submit-400;
+          }
         }
 
         w-step-by-step:first-child input.new-alias {

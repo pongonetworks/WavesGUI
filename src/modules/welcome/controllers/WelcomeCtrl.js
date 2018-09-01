@@ -2,28 +2,65 @@
     'use strict';
 
     const PATH = 'modules/welcome/templates';
+    const { Seed } = require('data-service');
 
-    const controller = function ($state, user, modalManager) {
+    /**
+     * @param Base
+     * @param $scope
+     * @param $state
+     * @param user
+     * @param modalManager
+     * @param $element
+     * @param storage
+     * @param {app.utils} utils
+     * @return {WelcomeCtrl}
+     */
+    const controller = function (Base, $scope, $state, user, modalManager, $element, storage, utils) {
 
-        class WelcomeCtrl {
+        class WelcomeCtrl extends Base {
 
-            get address() {
-                return this.activeUser;
+            get user() {
+                return this.userList[this._activeUserIndex];
             }
 
             get encryptedSeed() {
-                return tsUtils.find(this.userList, { address: this.activeUser }).encryptedSeed;
+                return this.user.encryptedSeed;
             }
 
             constructor() {
+                super($scope);
+                /**
+                 * @type {string}
+                 */
                 this.password = '';
+                /**
+                 * @type {null}
+                 */
                 this.loginForm = null;
-                user.getUserList()
-                    .then((list) => {
-                        this.activeUser = list.length && list[0].address;
-                        this.userList = list;
-                        this._updatePageUrl();
-                    });
+                /**
+                 * @type {string}
+                 */
+                this.activeUserAddress = null;
+                /**
+                 * @type {number}
+                 * @private
+                 */
+                this._activeUserIndex = null;
+
+                this.observe('activeUserAddress', this._calculateActiveIndex);
+
+                if (WavesApp.isWeb()) {
+                    storage.load('accountImportComplete')
+                        .then((complete) => {
+                            if (complete) {
+                                this._initUserList();
+                            } else {
+                                this._loadUserListFromBeta();
+                            }
+                        });
+                } else {
+                    this._initUserList();
+                }
             }
 
             showTutorialModals() {
@@ -31,33 +68,97 @@
             }
 
             login() {
-
                 try {
                     this.showPasswordError = false;
-                    const activeUser = tsUtils.find(this.userList, { address: this.activeUser });
+                    const activeUser = this.user;
                     const encryptionRounds = user.getSettingByUser(activeUser, 'encryptionRounds');
-                    const seed = Waves.Seed.decryptSeedPhrase(this.encryptedSeed, this.password, encryptionRounds);
+                    const phrase = Seed.decryptSeedPhrase(this.encryptedSeed, this.password, encryptionRounds);
+                    const seed = new Seed(phrase);
+                    const keyPair = seed.keyPair;
 
-                    Waves.Seed.fromExistingPhrase(seed);
-
-                    user.login({
-                        address: this.address,
-                        password: this.password
-                    });
+                    if (seed.address === activeUser.address) {
+                        user.login({
+                            address: activeUser.address,
+                            api: ds.signature.getDefaultSignatureApi(keyPair, activeUser.address, phrase),
+                            password: this.password,
+                            publicKey: seed.keyPair.publicKey
+                        });
+                    } else {
+                        this._showPasswordError();
+                    }
                 } catch (e) {
-                    this.password = '';
-                    this.showPasswordError = true;
+                    this._showPasswordError();
                 }
-
             }
 
+            /**
+             * @param {string} address
+             */
             removeUser(address) {
+                const user = this.userList.find((user) => user.address === address);
+                modalManager.showConfirmDeleteUser(user.settings.hasBackup).then(() => {
+                    this._deleteUser(address);
+                });
+            }
+
+            /**
+             * @private
+             */
+            _showPasswordError() {
+                this.password = '';
+                this.showPasswordError = true;
+            }
+
+            /**
+             * @private
+             */
+            _deleteUser(address) {
                 user.removeUserByAddress(address);
                 this.userList = this.userList.filter((user) => user.address !== address);
-                this._updatePageUrl();
-                if (address === this.activeUser) {
-                    this.activeUser = this.userList.length && this.userList[0].address;
+                this._updateActiveUserAddress();
+            }
+
+            _initUserList() {
+                user.getUserList()
+                    .then((list) => {
+                        this.userList = list;
+                        this.pendingRestore = false;
+                        this._updateActiveUserAddress();
+                        setTimeout(() => {
+                            $scope.$apply(); // TODO FIX!
+                        }, 100);
+                    });
+            }
+
+            _loadUserListFromBeta() {
+                this.pendingRestore = true;
+                utils.importAccountByIframe(WavesApp.betaOrigin, 5000)
+                    .then((userList) => {
+                        this.userList = userList || [];
+                        this.pendingRestore = false;
+                        this._updateActiveUserAddress();
+
+                        $scope.$apply();
+
+                        storage.save('accountImportComplete', true);
+                        storage.save('userList', userList);
+                    })
+                    .catch(() => {
+                        storage.save('accountImportComplete', true);
+                        this._initUserList();
+                    });
+            }
+
+            /**
+             * @private
+             */
+            _updateActiveUserAddress() {
+                if (this.userList.length) {
+                    this.activeUserAddress = this.userList[0].address;
+                } else {
+                    this.activeUserAddress = null;
                 }
+                this._updatePageUrl();
             }
 
             /**
@@ -71,12 +172,34 @@
                 }
             }
 
+            /**
+             * @private
+             */
+            _calculateActiveIndex() {
+                const activeAddress = this.activeUserAddress;
+                let index = null;
+
+                if (!activeAddress) {
+                    return null;
+                }
+
+                this.userList.some(({ address }, i) => {
+                    if (address === activeAddress) {
+                        index = i;
+                        return true;
+                    }
+                    return false;
+                });
+
+                this._activeUserIndex = index;
+            }
+
         }
 
         return new WelcomeCtrl();
     };
 
-    controller.$inject = ['$state', 'user', 'modalManager'];
+    controller.$inject = ['Base', '$scope', '$state', 'user', 'modalManager', '$element', 'storage', 'utils'];
 
     angular.module('app.welcome')
         .controller('WelcomeCtrl', controller);

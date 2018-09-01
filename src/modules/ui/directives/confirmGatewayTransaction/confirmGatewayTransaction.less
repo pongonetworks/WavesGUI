@@ -1,4 +1,4 @@
-@import (reference) '../../../config';
+@import (reference) 'config';
 @import (reference) '../../../app/less/typography';
 
 w-confirm-gateway-transaction {
@@ -20,6 +20,8 @@ w-confirm-gateway-transaction {
     }
 
     .value {
+      max-width: 70%;
+      word-break: break-all;
       .footnote-1();
       color: @color-basic-900;
     }

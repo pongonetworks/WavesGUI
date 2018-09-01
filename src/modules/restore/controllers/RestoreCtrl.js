@@ -6,6 +6,7 @@
      * @param $scope
      * @param {User} user
      * @param {app.utils} utils
+     * @param {ModalManager} modalManager
      * @return {RestoreCtrl}
      */
     const controller = function (Base, $scope, user, utils, modalManager) {
@@ -19,19 +20,31 @@
                 /**
                  * @type {string}
                  */
-                this.address = null;
+                this.address = '';
                 /**
                  * @type {string}
                  */
-                this.seed = null;
+                this.seed = '';
                 /**
                  * @type {string}
                  */
-                this.encryptedSeed = null;
+                this.name = '';
                 /**
                  * @type {string}
                  */
-                this.password = null;
+                this.encryptedSeed = '';
+                /**
+                 * @type {string}
+                 */
+                this.password = '';
+                /**
+                 * @type {boolean}
+                 */
+                this.saveUserData = true;
+                /**
+                 * @type {number}
+                 */
+                this.activeStep = 0;
 
                 this.observe('seed', this._onChangeSeed);
                 this.observeOnce('seedForm', () => {
@@ -45,17 +58,40 @@
 
             restore() {
 
-                const seedData = Waves.Seed.fromExistingPhrase(this.seed);
+                if (!this.saveUserData) {
+                    this.password = Date.now().toString();
+                }
+                const seedData = new ds.Seed(this.seed);
                 const encryptedSeed = seedData.encrypt(this.password);
-                const publicKey = seedData.keyPair.publicKey;
+                const keyPair = seedData.keyPair;
 
                 return user.create({
                     address: this.address,
+                    api: ds.signature.getDefaultSignatureApi(keyPair, this.address, seedData.phrase),
+                    name: this.name,
                     password: this.password,
                     settings: { termsAccepted: false },
                     encryptedSeed,
-                    publicKey
-                }, true);
+                    publicKey: keyPair.publicKey,
+                    saveToStorage: this.saveUserData
+                }, true, true);
+            }
+
+            resetNameAndPassword() {
+                this.name = '';
+                this.password = '';
+            }
+
+            nextStep() {
+                if (!this.saveUserData) {
+                    return this.restore();
+                }
+
+                this.activeStep++;
+            }
+
+            importAccounts() {
+                return modalManager.showImportAccountsModal();
             }
 
             /**
@@ -63,7 +99,7 @@
              */
             _onChangeSeed() {
                 if (this.seedForm.$valid) {
-                    this.address = Waves.Seed.fromExistingPhrase(this.seed).address;
+                    this.address = new ds.Seed(this.seed).address;
                 } else {
                     this.address = '';
                 }

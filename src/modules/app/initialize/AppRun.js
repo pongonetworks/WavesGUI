@@ -1,7 +1,9 @@
 /* eslint-disable no-console */
-/* global openInBrowser, i18next, BigNumber, Waves, identityImg */
+/* global openInBrowser, BigNumber */
 (function () {
     'use strict';
+
+    const tsUtils = require('ts-utils');
 
     const PROGRESS_MAP = {
         RUN_SCRIPT: 10,
@@ -24,93 +26,62 @@
             this._current += delta;
             this._current = Math.min(this._current, 100);
             this._element.style.width = `${this._current}%`;
+            WavesApp.progress = this._current;
         },
         stop() {
-            const loader = $(this._root);
-            loader.fadeOut(1000, () => {
-                loader.remove();
+            return new Promise(resolve => {
+                const loader = $(this._root);
+                loader.fadeOut(1000, () => {
+                    loader.remove();
+                    resolve();
+                });
             });
         }
     };
 
     LOADER.addProgress(PROGRESS_MAP.RUN_SCRIPT);
-
+    WavesApp.state = 'initApp';
     /**
-     * @param $rootScope
+     * @param {$rootScope.Scope} $rootScope
      * @param {User} user
      * @param {app.utils} utils
      * @param $state
      * @param {State} state
      * @param {ModalManager} modalManager
+     * @param {Storage} storage
+     * @param {INotification} notification
+     * @param {app.utils.decorators} decorators
+     * @param {Waves} waves
+     * @param {ModalRouter} ModalRouter
      * @return {AppRun}
      */
-    const run = function ($rootScope, utils, user, $state, state, modalManager, storage) {
+    const run = function ($rootScope, utils, user, $state, state, modalManager, storage,
+                          notification, decorators, waves, ModalRouter) {
 
-        class ExtendedAsset extends Waves.Asset {
+        const phone = WavesApp.device.phone();
+        const tablet = WavesApp.device.tablet();
 
-            constructor(props) {
-                super({
-                    ...props,
-                    name: WavesApp.remappedAssetNames[props.id] || props.name
-                    // ID, name, precision and description are added here
-                });
+        const isPhone = !!phone;
+        const isTablet = !!tablet;
+        const isDesktop = !(isPhone || isTablet);
 
-                this.reissuable = props.reissuable;
-                this.timestamp = props.timestamp;
-                this.sender = props.sender;
-                this.height = props.height;
+        $rootScope.isDesktop = isDesktop;
+        $rootScope.isNotDesktop = !isDesktop;
+        $rootScope.isPhone = isPhone;
+        $rootScope.isTablet = isTablet;
 
-                const divider = new BigNumber(10).pow(this.precision);
-                this.quantity = new BigNumber(props.quantity).div(divider);
-
-                this.ticker = props.ticker || '';
-                this.sign = props.sign || '';
-                this.displayName = props.ticker || props.name;
-            }
-
+        if (isPhone) {
+            document.body.classList.add('phone');
+        } else if (isTablet) {
+            document.body.classList.add('tablet');
+        } else {
+            document.body.classList.add('desktop');
         }
-
-        function remapAssetProps(props) {
-            props.precision = props.decimals;
-            delete props.decimals;
-            return props;
-        }
-
-        const cache = Object.create(null);
-        Waves.config.set({
-            assetFactory(props) {
-
-                if (cache[props.id]) {
-                    return cache[props.id];
-                }
-
-                const promise = fetch(`${WavesApp.network.api}/assets/${props.id}`)
-                    .then(utils.onFetch)
-                    .then((fullProps) => new ExtendedAsset(remapAssetProps(fullProps)))
-                    .catch(() => {
-                        return Waves.API.Node.v1.transactions.get(props.id)
-                            .then((partialProps) => new ExtendedAsset(remapAssetProps(partialProps)));
-                    });
-
-                cache[props.id] = promise;
-                cache[props.id].catch(() => {
-                    delete cache[props.id];
-                });
-
-                return cache[props.id];
-            }
-        });
-
-        user.onLogin().then(() => {
-            Waves.config.set({
-                nodeAddress: user.getSetting('network.node'),
-                matcherAddress: user.getSetting('network.matcher')
-            });
-        });
 
         class AppRun {
 
             constructor() {
+                const identityImg = require('identity-img');
 
                 LOADER.addProgress(PROGRESS_MAP.APP_RUN);
 
@@ -119,7 +90,11 @@
                  * @type {Array<string>}
                  */
                 this.activeClasses = [];
-                this._changeLangHandler = null;
+                /**
+                 * @type {ModalRouter}
+                 * @private
+                 */
+                this._modalRouter = new ModalRouter();
 
                 /**
                  * Configure library generation avatar by address
@@ -131,6 +106,55 @@
                 this._initializeLogin();
                 this._initializeOutLinks();
 
+                if (WavesApp.isDesktop()) {
+                    window.listenMainProcessEvent((type, url) => {
+                        const parts = utils.parseElectronUrl(url);
+                        const path = parts.path.replace(/\/$/, '') || parts.path;
+                        if (path) {
+                            const noLogin = path === '/' || WavesApp.stateTree.where({ noLogin: true }).some(item => {
+                                const url = item.get('url') || item.id;
+                                return path === url;
+                            });
+                            if (noLogin) {
+                                location.hash = `#!${path}${parts.search}`;
+                            } else {
+                                user.onLogin().then(() => {
+                                    setTimeout(() => {
+                                        location.hash = `#!${path}${parts.search}`;
+                                    }, 1000);
+                                });
+                            }
+                        }
+                    });
+                }
+
+                $rootScope.WavesApp = WavesApp;
+            }
+
+            _initTryDesktop() {
+                if (!isDesktop || WavesApp.isDesktop()) {
+                    return Promise.resolve(true);
+                }
+
+                return storage.load('openClientMode').then(clientMode => {
+                    switch (clientMode) {
+                        case 'desktop':
+                            return this._runDesktop();
+                        case 'web':
+                            return Promise.resolve(true);
+                        default:
+                            return modalManager.showTryDesktopModal()
+                                .then(() => this._runDesktop())
+                                .catch(() => true);
+                    }
+                });
+            }
+
+            _runDesktop() {
+                this._canOpenDesktopPage = true;
+                $state.go('desktop');
+
+                return false;
             }
 
             /**
@@ -155,16 +179,25 @@
                 }
             }
 
+            /**
+             * @private
+             */
             _listenChangeLanguage() {
-                this._changeLangHandler = () => {
-                    localStorage.setItem('lng', i18next.language);
-                };
                 i18next.on('languageChanged', this._changeLangHandler);
             }
 
+            /**
+             * @private
+             */
             _stopListenChangeLanguage() {
                 i18next.off('languageChanged', this._changeLangHandler);
-                this._changeLangHandler = null;
+            }
+
+            /**
+             * @private
+             */
+            _changeLangHandler() {
+                localStorage.setItem('lng', i18next.language);
             }
 
             /**
@@ -172,25 +205,64 @@
              */
             _initializeLogin() {
 
-                storage.onReady().then((isNew) => {
-                    if (isNew) {
-                        modalManager.showTutorialModals();
-                    }
-                });
-
-                const START_STATES = WavesApp.stateTree.where({ noLogin: true })
-                    .map((item) => item.id);
+                let needShowTutorial = false;
 
                 this._listenChangeLanguage();
+
+                const START_STATES = WavesApp.stateTree.where({ noLogin: true })
+                    .map((item) => WavesApp.stateTree.getPath(item.id).join('.'));
+
+                let waiting = false;
+
                 const stop = $rootScope.$on('$stateChangeStart', (event, toState, params) => {
-                    stop();
+
+                    let tryDesktop;
 
                     if (START_STATES.indexOf(toState.name) === -1) {
                         event.preventDefault();
                     }
 
-                    this._login(toState)
+                    if (toState.name === 'desktop' && !this._canOpenDesktopPage) {
+                        event.preventDefault();
+                        $state.go(START_STATES[0]);
+                    }
+
+                    if (waiting) {
+                        return null;
+                    }
+
+                    if (needShowTutorial && toState.name !== 'dex-demo') {
+                        modalManager.showTutorialModals();
+                        needShowTutorial = false;
+                    }
+
+                    if (toState.name === 'main.dex-demo') {
+                        tryDesktop = Promise.resolve();
+                    } else {
+                        tryDesktop = this._initTryDesktop();
+                    }
+
+                    const promise = Promise.all([
+                        storage.onReady(),
+                        tryDesktop
+                    ]).then(([oldVersion, canOpenTutorial]) => {
+                        needShowTutorial = canOpenTutorial && !oldVersion;
+                    });
+
+                    promise.then(() => {
+                        if (needShowTutorial && toState.name !== 'dex-demo') {
+                            modalManager.showTutorialModals();
+                            needShowTutorial = false;
+                        }
+                    });
+
+                    waiting = true;
+
+                    tryDesktop
+                        .then((canChangeState) => this._login(toState, canChangeState))
                         .then(() => {
+                            stop();
+
                             this._stopListenChangeLanguage();
                             if (START_STATES.indexOf(toState.name) === -1) {
                                 $state.go(toState.name, params);
@@ -198,18 +270,15 @@
                                 $state.go(user.getActiveState('wallet'));
                             }
 
-                            const termsAccepted = user.getSetting('termsAccepted');
                             i18next.changeLanguage(user.getSetting('lng'));
 
-                            if (!termsAccepted) {
-                                modalManager.showTermsAccept(user).then(() => {
-                                    if (user.getSetting('shareAnalytics')) {
-                                        analytics.activate();
-                                    }
+                            this._initializeTermsAccepted()
+                                .then(() => {
+                                    this._initializeBackupWarning();
+                                })
+                                .then(() => {
+                                    this._modalRouter.initialize();
                                 });
-                            } else if (user.getSetting('shareAnalytics')) {
-                                analytics.activate();
-                            }
 
                             $rootScope.$on('$stateChangeStart', (event, current) => {
                                 if (START_STATES.indexOf(current.name) !== -1) {
@@ -223,20 +292,103 @@
             }
 
             /**
+             * @return Promise
+             * @private
+             */
+            _initializeTermsAccepted() {
+                if (!user.getSetting('termsAccepted')) {
+                    return modalManager.showTermsAccept(user).then(() => {
+                        if (user.getSetting('shareAnalytics')) {
+                            analytics.activate();
+                        }
+                    })
+                        .catch(() => false);
+                } else if (user.getSetting('shareAnalytics')) {
+                    analytics.activate();
+                }
+                return Promise.resolve();
+            }
+
+            /**
+             * @param {object} [scope]
+             * @param {boolean} scope.closeByModal
+             * @private
+             */
+            @decorators.scope({ closeByModal: false })
+            _initializeBackupWarning(scope) {
+                if (!user.getSetting('hasBackup')) {
+
+                    const id = tsUtils.uniqueId('n');
+
+                    const changeModalsHandler = (modal) => {
+
+                        scope.closeByModal = true;
+                        notification.remove(id);
+                        scope.closeByModal = false;
+
+                        modal.catch(() => null)
+                            .then(() => {
+                                if (!user.getSetting('hasBackup')) {
+                                    this._initializeBackupWarning();
+                                }
+                            });
+                    };
+
+                    modalManager.openModal.once(changeModalsHandler);
+
+                    notification.error({
+                        id,
+                        ns: 'app.utils',
+                        title: {
+                            literal: 'notification.backup.title'
+                        },
+                        body: {
+                            literal: 'notification.backup.body'
+                        },
+                        action: {
+                            literal: 'notification.backup.action',
+                            callback: () => {
+                                modalManager.showSeedBackupModal();
+                            }
+                        },
+                        onClose: () => {
+                            if (scope.closeByModal || user.getSetting('hasBackup')) {
+                                return null;
+                            }
+
+                            modalManager.openModal.off(changeModalsHandler);
+
+                            const stop = $rootScope.$on('$stateChangeSuccess', () => {
+                                stop();
+                                this._initializeBackupWarning();
+                            });
+                        }
+                    }, -1);
+                }
+            }
+
+            /**
              * @param {{name: string}} currentState
+             * @param {boolean} canChangeState
              * @return {Promise}
              * @private
              */
-            _login(currentState) {
+            _login(currentState, canChangeState) {
+                // const sessions = sessionBridge.getSessionsData();
 
                 const states = WavesApp.stateTree.where({ noLogin: true })
                     .map((item) => {
                         return WavesApp.stateTree.getPath(item.id)
                             .join('.');
                     });
-                if (states.indexOf(currentState.name) === -1) {
+                if (canChangeState && states.indexOf(currentState.name) === -1) {
+                    // if (sessions.length) {
+                    //     $state.go('sessions');
+                    // } else {
                     $state.go(states[0]);
+                    // }
                 }
+
                 return user.onLogin();
             }
 
@@ -250,7 +402,10 @@
              */
             _onChangeStateSuccess(event, toState, some, fromState) {
                 if (fromState.name) {
-                    analytics.pushPageView(AppRun._getUrlFromState(toState), AppRun._getUrlFromState(fromState));
+                    analytics.pushPageView(
+                        `${AppRun._getUrlFromState(toState)}.${WavesApp.type}`,
+                        `${AppRun._getUrlFromState(fromState)}.${WavesApp.type}`
+                    );
                 }
                 this.activeClasses.forEach((className) => {
                     document.body.classList.remove(className);
@@ -275,10 +430,13 @@
                     this._getLocalizeReadyPromise(),
                     this._getImagesReadyPromise()
                 ])
-                    .then(() => LOADER.stop())
+                    .then(() => {
+                        LOADER.stop();
+                        WavesApp.state = 'appRun';
+                    })
                     .catch((e) => {
                         console.error(e);
-                        // TODO add error load application page
+                        WavesApp.state = 'loadingError';
                     });
             }
 
@@ -335,8 +493,28 @@
         return new AppRun();
     };
 
-    run.$inject = ['$rootScope', 'utils', 'user', '$state', 'state', 'modalManager', 'storage'];
+    run.$inject = [
+        '$rootScope',
+        'utils',
+        'user',
+        '$state',
+        'state',
+        'modalManager',
+        'storage',
+        'notification',
+        'decorators',
+        'waves',
+        'ModalRouter',
+        'whatsNew'
+    ];
 
     angular.module('app')
         .run(run);
 })();
+
+/**
+ * @property {boolean} $rootScope.Scope#isDesktop
+ * @property {boolean} $rootScope.Scope#isNotDesktop
+ * @property {boolean} $rootScope.Scope#isPhone
+ * @property {boolean} $rootScope.Scope#isTablet
+ */

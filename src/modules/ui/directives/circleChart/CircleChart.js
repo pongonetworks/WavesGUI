@@ -51,9 +51,10 @@
             }
 
             _getBalances() {
+                const Money = ds.wavesDataEntities.Money;
                 return this._data
                     .map((item) => {
-                        const value = item.value instanceof Waves.Money ? item.value.getTokens() : item.value;
+                        const value = item.value instanceof Money ? item.value.getTokens() : item.value;
                         return { id: item.id, value };
                     });
             }
@@ -77,7 +78,7 @@
 
             _draw() {
                 const balances = this._getBalances();
-                const total = balances.reduce((result, item) => result.add(item.value), new BigNumber(0));
+                const total = balances.reduce((result, item) => result.plus(item.value), new BigNumber(0));
                 const center = this._canvas.height / 2 + 0.5;
                 const insightRadius = this._options.center || DEFAULT_OPTIONS.center;
 
@@ -130,11 +131,14 @@
                 });
 
                 if (insightRadius) {
+                    this._ctx.save();
+                    this._ctx.globalCompositeOperation = 'destination-out';
                     this._ctx.beginPath();
-                    this._ctx.fillStyle = '#fff';
+                    this._ctx.fillStyle = 'rgba(255,255,255,1)';
                     this._ctx.arc(center, center, insightRadius, 0, 2 * Math.PI);
                     this._ctx.fill();
                     this._ctx.closePath();
+                    this._ctx.restore();
                 }
             }
 
