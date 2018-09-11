@@ -1,11 +1,11 @@
 {
-  "name": "waves-client",
+  "name": "tn-client",
   "version": "1.0.6",
-  "description": "The official client application for the Waves platform",
+  "description": "The official client application for Turtle Network",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/wavesplatform/WavesGUI.git"
+    "url": "https://github.com/BlackTurtle123/WavesGUI.git"
   },
   "author": {
     "name": "Waves Platform",
