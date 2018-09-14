@@ -9,8 +9,8 @@
   },
   "author": {
     "name": "Waves Platform",
-    "email": "info@wavesplatform.com",
-    "url": "https://wavesplatform.com"
+    "email": "info@blackturtle.eu",
+    "url": "https://blackturtle.eu"
   },
   "license": "Apache-2.0",
   "devDependencies": {
@@ -89,8 +89,8 @@
   "dependencies": {
     "@types/ramda": "0.25.34",
     "@uirouter/angularjs": "1.0.8",
-    "@waves/assets-pairs-order": "4.0.0",
-    "@waves/data-entities": "1.6.0",
+    "@turtlenetwork/assets-pairs-order": "4.0.0",
+    "@turtlenetwork/data-entities": "7.0.0",
     "@waves/data-service-client-js": "0.5.1",
     "@waves/event-sender": "0.4.4",
     "@waves/waves-browser-bus": "0.0.7",

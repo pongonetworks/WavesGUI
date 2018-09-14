@@ -1,7 +1,7 @@
 {
-  "appId": "com.wavesplatform.client.lite",
-  "copyright": "Waves Platform",
-  "productName": "Waves Client",
+  "appId": "com.tn.client.lite",
+  "copyright": "TurtleNetwork Client",
+  "productName": "TN Client",
   "files": "**/*",
   "asar": true,
   "compression": "normal",
@@ -17,7 +17,7 @@
       "deb",
       "zip"
     ],
-    "executableName": "waves-client"
+    "executableName": "tn-client"
   },
   "mac": {
     "category": "public.app-category.finance",
@@ -34,11 +34,11 @@
       "target": "zip",
       "arch": [ "x64" ]
     }],
-    "legalTrademarks": "Waves Platform",
+    "legalTrademarks": "BlackTurtle BVBA",
     "icon": "electron/icons/icon.ico"
   },
   "nsis": {
-    "artifactName": "waves-client[${env.WAVES_CONFIGURATION}]-setup-${version}.${ext}",
+    "artifactName": "tn-client[${env.WAVES_CONFIGURATION}]-setup-${version}.${ext}",
     "include": "electron/installer.nsh",
     "installerIcon": "electron/icons/icon.ico",
     "uninstallerIcon": "electron/icons/icon.ico"

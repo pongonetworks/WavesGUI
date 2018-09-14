@@ -1,6 +1,6 @@
 # Waves Client
 
-[**Website**](https://wavesplatform.com/) | [**Discord**](https://discord.gg/cnFmDyA) | [**Forum**](https://forum.wavesplatform.com/) | [**Support**](https://support.wavesplatform.com/) | [**Documentation**](https://docs.wavesplatform.com)
+[**Website**](https://blackturtle.eu/) | [**Discord**](https://discord.gg/cnFmDyA) | [**Forum**](https://forum.wavesplatform.com/) | [**Support**](https://support.wavesplatform.com/) | [**Documentation**](https://docs.wavesplatform.com)
 
 [![Waves App Promo](https://cdn-images-1.medium.com/max/1200/1*Tgu7GVQg9b8Es4lGA1Fj4g.png)](https://wavesplatform.com/product)
 
