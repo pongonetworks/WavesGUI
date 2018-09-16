@@ -18,7 +18,7 @@ import {
 } from './interface';
 import { contains } from 'ts-utils';
 import { TRANSACTION_TYPE_NUMBER } from '@turtlenetwork/tn-signature-generator';
-import { TransactionFilters } from '@waves/data-service-client-js/src/types';
+import { TransactionFilters } from '@turtlenetwork/data-service-client-js/src/types';
 
 
 export function list(address: string, limit = 100): Promise<Array<T_TX>> {

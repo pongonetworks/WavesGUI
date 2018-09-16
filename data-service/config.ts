@@ -1,4 +1,4 @@
-import DataServiceClient from '@waves/data-service-client-js';
+import DataServiceClient from '@turtlenetwork/data-service-client-js';
 import { IHash } from './interface';
 import { time } from './api/node/node';
 
