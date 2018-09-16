@@ -1,6 +1,6 @@
 import { Money, BigNumber } from '@waves/data-entities';
 import { idToNode, normalizeTime } from '../utils/utils';
-import { libs, TRANSACTION_TYPE_VERSION } from '@waves/waves-signature-generator';
+import { libs, TRANSACTION_TYPE_VERSION } from '@turtlenetwork/tn-signature-generator';
 import { getSignatureApi, SIGN_TYPE } from '../sign';
 import { request } from '../utils/request';
 import { parse } from '../api/matcher/getOrders';

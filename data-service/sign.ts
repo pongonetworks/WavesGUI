@@ -8,7 +8,7 @@ import {
     CREATE_ORDER_SIGNATURE,
     CANCEL_ORDER_SIGNATURE,
     utils
-} from '@waves/waves-signature-generator';
+} from '@turtlenetwork/tn-signature-generator';
 import { IKeyPair } from './interface';
 
 let API: ISignatureApi;

@@ -19,7 +19,7 @@ import {
     createOrder as createOrderF,
     cancelOrder as cancelOrderF
 } from './broadcast/broadcast';
-import { utils as cryptoUtils } from '@waves/waves-signature-generator';
+import { utils as cryptoUtils } from '@turtlenetwork/tn-signature-generator';
 
 export { Seed } from './classes/Seed';
 
