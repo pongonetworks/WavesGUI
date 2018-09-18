@@ -13,6 +13,8 @@
      */
     const factory = function ($mdDialog, utils, decorators, $templateRequest, $rootScope, $injector, state) {
 
+        const tsUtils = require('ts-utils');
+        const ds = require('data-service');
 
         const DEFAULT_OPTIONS = {
             clickOutsideToClose: true,
@@ -31,7 +33,14 @@
         class ModalManager {
 
             constructor() {
+                /**
+                 * @type {Signal<Promise>}
+                 */
                 this.openModal = new tsUtils.Signal();
+                /**
+                 * @type {number}
+                 * @private
+                 */
                 this._counter = 0;
 
                 state.signals.changeRouterStateStart.on((event) => {
@@ -47,10 +56,43 @@
                 });
             }
 
+            showTryDesktopModal() {
+                return this._getModal({
+                    id: 'try-desktop',
+                    title: '',
+                    contentUrl: 'modules/utils/modals/tryDesktop/tryDesktop.html',
+                    controller: 'TryDesktopCtrl',
+                    clickOutsideToClose: false,
+                    escapeToClose: false,
+                    mod: 'try-desktop-modal'
+                });
+            }
+
+            showGatewaySign(search) {
+                return this._getModal({
+                    id: 'gateway-sign-in',
+                    title: '{{$ctrl.titleLiteral}}',
+                    contentUrl: 'modules/utils/modals/gateway/gatewaySign.html',
+                    controller: 'GatewaySignCtrl',
+                    locals: { search },
+                    clickOutsideToClose: false,
+                    escapeToClose: false
+                });
+            }
+
+            showPinAsset() {
+                return this._getModal({
+                    id: 'pin-asset',
+                    title: 'modal.pinAsset.title',
+                    templateUrl: 'modules/utils/modals/pinAsset/pinAsset.html',
+                    controller: 'PinAssetCtrl',
+                    mod: 'pin-asset-modal'
+                });
+            }
+
             showAssetInfo(asset) {
                 return this._getModal({
                     id: 'asset-info',
-                    ns: 'app.utils',
                     title: 'modal.assetInfo.title',
                     contentUrl: 'modules/utils/modals/assetInfo/assetInfo.html',
                     locals: asset,
@@ -70,10 +112,11 @@
                 });
             }
 
-            /**
-             * @param {User} user
-             */
-            showTermsAccept(user) {
+            showTermsAccept() {
+                /**
+                 * @type {User}
+                 */
+                const user = $injector.get('user');
                 return this._getModal({
                     id: 'terms-accept',
                     templateUrl: 'modules/utils/modals/termsAccept/terms-accept.html',
@@ -84,26 +127,86 @@
                     .then(() => user.setSetting('termsAccepted', true));
             }
 
-            /**
-             * @param {User} user
-             */
             showTutorialModals() {
                 return this._getModal({
                     id: 'tutorial-modals',
                     templateUrl: 'modules/utils/modals/tutorialModals/tutorialModals.html',
-                    controller: 'TutorialModalsCtrl',
-                    clickOutsideToClose: false,
-                    escapeToClose: false
+                    controller: 'TutorialModalsCtrl'
+                });
+            }
+
+            showSeedBackupModal() {
+                const api = ds.signature.getSignatureApi();
+
+                return api.getSeed()
+                    .then((phrase) => {
+                        const seed = new ds.Seed(phrase);
+                        return this._getModal({
+                            id: 'seed-backup',
+                            title: 'modal.backup.title.{{$ctrl.titleLiteral}}',
+                            contentUrl: 'modules/utils/modals/seedBackup/seedBackupModals.html',
+                            controller: 'SeedBackupModalsCtrl',
+                            locals: { seed }
+                        });
+                    });
+            }
+
+            showConfirmDeleteUser(hasBackup) {
+                return this._getModal({
+                    id: 'delete-user-confirm',
+                    templateUrl: 'modules/utils/modals/confirmDeleteUser/confirmDeleteUser.modal.html',
+                    controller: 'confirmDeleteUserCtrl',
+                    locals: {
+                        hasBackup
+                    }
                 });
             }
 
             showAccountInfo() {
+                /**
+                 * @type {User}
+                 */
+                const user = $injector.get('user');
                 return this._getModal({
                     id: 'account-info',
                     controller: 'AccountInfoCtrl',
                     title: 'modal.account.title',
+                    titleParams: {
+                        name: user.name || $injector.get('i18n')
+                            .translate('modal.account.title_default_name', 'app.utils')
+                    },
                     contentUrl: 'modules/utils/modals/accountInfo/account-info.modal.html',
                     mod: 'account-info'
+                });
+            }
+
+            /**
+             * @param {object} [data]
+             * @param {string} [data.assetId]
+             * @param {'singleSend'|'massSend'} [data.mode]
+             * @param {string} [data.amount]
+             * @param {string} [data.recipient]
+             * @param {boolean} [data.strict]
+             * @param {string} [data.referrer]
+             * @return {Promise}
+             */
+            showSendAsset(data) {
+                data = data || Object.create(null);
+
+                return this._getModal({
+                    id: 'send-asset',
+                    controller: 'AssetSendCtrl',
+                    templateUrl: 'modules/utils/modals/sendAsset/send.modal.html',
+                    mod: 'modal-send',
+                    locals: {
+                        assetId: data.assetId,
+                        canChooseAsset: !data.assetId,
+                        mode: data.mode,
+                        amount: data.amount,
+                        recipient: data.recipient,
+                        strict: data.strict,
+                        referrer: data.referrer
+                    }
                 });
             }
 
@@ -112,17 +215,14 @@
              * @param {Asset} [asset]
              * @return {Promise}
              */
-            showSendAsset(user, asset = Object.create(null)) {
-                return this._getModal({
-                    id: 'send-asset',
-                    controller: 'AssetSendCtrl',
-                    titleContentUrl: 'modules/utils/modals/sendAsset/send-title.modal.html',
-                    contentUrl: 'modules/utils/modals/sendAsset/send.modal.html',
-                    mod: 'modal-send',
-                    locals: {
-                        assetId: asset.id,
-                        canChooseAsset: !asset.id
-                    }
+            showReceiveModal(user, asset) {
+                return user.onLogin().then(() => {
+                    return this._getModal({
+                        id: 'receive-popup',
+                        locals: { address: user.address, asset },
+                        templateUrl: 'modules/utils/modals/receive/Receive.html',
+                        controller: 'ReceiveCtrl'
+                    });
                 });
             }
 
@@ -186,8 +286,7 @@
                     id: 'transaction-info',
                     ns: 'app.ui',
                     controller: 'TransactionInfoCtrl',
-                    titleContentUrl: 'modules/utils/modals/transactionInfo/transaction-info-title.modal.html',
-                    contentUrl: 'modules/utils/modals/transactionInfo/transaction-info.modal.html',
+                    templateUrl: 'modules/utils/modals/transactionInfo/transaction-info.modal.html',
                     mod: 'transaction-info',
                     locals: { transactionId }
                 });
@@ -216,12 +315,80 @@
                 });
             }
 
+            showBurnModal(assetId) {
+                return $injector.get('waves').node.assets.balance(assetId).then(({ available }) => this._getModal({
+                    id: 'token-burn',
+                    mod: 'change-token',
+                    locals: { money: available, txType: 'burn' },
+                    titleContent: '<span w-i18n="modal.token.burn.title" params="{name: $ctrl.asset.name}"></span>',
+                    contentUrl: 'modules/utils/modals/changeToken/change-token-modal.html',
+                    controller: 'TokenChangeModalCtrl'
+                }));
+            }
+
+            showReissueModal(assetId) {
+                return $injector.get('waves').node.assets.balance(assetId).then(({ available }) => this._getModal({
+                    id: 'token-burn',
+                    mod: 'change-token',
+                    locals: { money: available, txType: 'reissue' },
+                    titleContent: '<span w-i18n="modal.token.reissue.title" params="{name: $ctrl.asset.name}"></span>',
+                    contentUrl: 'modules/utils/modals/changeToken/change-token-modal.html',
+                    controller: 'TokenChangeModalCtrl'
+                }));
+            }
+
+            showImportAccountsModal() {
+                return this._getModal({
+                    id: 'import-accounts',
+                    mod: 'import-accounts',
+                    controller: 'ImportAccountsCtrl',
+                    contentUrl: 'modules/utils/modals/importAccounts/importAccounts.html'
+                });
+            }
+
+            /**
+             * @param {IDialogOptions} options
+             * @return {Promise}
+             */
+            showDialogModal(options) {
+                const contentUrl = 'modules/utils/modals/templates/dialog-content.html';
+
+                const ns = options.ns || DEFAULT_OPTIONS.ns;
+                options.message.ns = options.message.ns || ns;
+                options.buttons.forEach((button) => {
+                    button.text.ns = button.text.ns || ns;
+                });
+
+                const controller = function ($scope, $mdDialog) {
+                    Object.assign($scope, options);
+                    this.applyClick = (button) => {
+                        const method = button.success ? 'hide' : 'cancel';
+                        if (button.click) {
+                            button.click();
+                        }
+                        $mdDialog[method](button.data);
+                    };
+                };
+
+                controller.$inject = ['$scope', '$mdDialog'];
+
+                return this._getModal(tsUtils.merge({}, DEFAULT_OPTIONS, options, { contentUrl, controller }));
+            }
+
             /**
              * @param {IModalOptions} options
              * @return {$q.resolve}
              */
             showCustomModal(options) {
                 return this._getModal(tsUtils.merge({}, DEFAULT_OPTIONS, options));
+            }
+
+            /**
+             * @return {User}
+             * @private
+             */
+            _getUser() {
+                return $injector.get('user');
             }
 
             /**
@@ -242,7 +409,7 @@
                             this._counter--;
 
                             if (options.id) {
-                                analytics.push('Modal', 'Modal.Close', options.id);
+                                analytics.push('Modal', `Modal.Close.${WavesApp.type}`, options.id);
                             }
                         };
 
@@ -254,7 +421,7 @@
                         const modal = $mdDialog.show(target);
 
                         if (options.id) {
-                            analytics.push('Modal', 'Modal.Open', options.id);
+                            analytics.push('Modal', `Modal.Open.${WavesApp.type}`, options.id);
                         }
 
                         modal.then(changeCounter, changeCounter);
@@ -444,7 +611,7 @@
 
         }
 
-        return new ModalManager();
+        return utils.bind(new ModalManager());
     };
 
     factory.$inject = ['$mdDialog', 'utils', 'decorators', '$templateRequest', '$rootScope', '$injector', 'state'];
@@ -477,4 +644,29 @@
  * @property {*} [locals]
  * @property {string | function} [controller]
  * @property {string} [controllerAs]
+ */
+
+/**
+ * @typedef {object} IDialogOptions
+ * @property {string} [ns]
+ * @property {string} iconClass
+ * @property {IMessage} message
+ * @property {IDialogButton[]} buttons
+ * @property {boolean} [clickOutsideToClose]
+ * @property {boolean} [escapeToClose]
+ */
+
+/**
+ * @typedef {object} IMessage
+ * @property {string} [ns]
+ * @property {string} literal
+ * @property {object} [params]
+ */
+
+/**
+ * @typedef {object} IDialogButton
+ * @property {boolean} success
+ * @property {IMessage} text
+ * @property {string} classes
+ * @property {function} [click]
  */

@@ -2,9 +2,9 @@ import * as gulp from 'gulp';
 import * as concat from 'gulp-concat';
 import * as babel from 'gulp-babel';
 import { exec, execSync } from 'child_process';
-import { download, getFilesFrom, prepareHTML, run, task } from './ts-scripts/utils';
-import { basename, join, sep } from 'path';
-import { copy, mkdirp, outputFile, readdir, readFile, readJSON, readJSONSync, writeFile, writeJSON } from 'fs-extra';
+import { download, getAllLessFiles, getFilesFrom, prepareExport, prepareHTML, run, task } from './ts-scripts/utils';
+import { basename, extname, join, sep } from 'path';
+import { copy, outputFile, readdir, readFile, readJSON, readJSONSync, writeFile } from 'fs-extra';
 import { IMetaJSON, IPackageJSON, TBuild, TConnection, TPlatform } from './ts-scripts/interface';
 import * as templateCache from 'gulp-angular-templatecache';
 import * as htmlmin from 'gulp-htmlmin';
@@ -12,6 +12,7 @@ import * as htmlmin from 'gulp-htmlmin';
 const zip = require('gulp-zip');
 const s3 = require('gulp-s3');
 
+const { themes: THEMES } = readJSONSync(join(__dirname, 'src/themeConfig', 'theme.json'));
 const meta: IMetaJSON = readJSONSync(join(__dirname, 'ts-scripts', 'meta.json'));
 const pack: IPackageJSON = readJSONSync(join(__dirname, 'package.json'));
 const configurations = Object.keys(meta.configurations);
@@ -22,7 +23,7 @@ const AWS = {
 };
 
 const SOURCE_FILES = getFilesFrom(join(__dirname, 'src'), '.js');
-const IMAGE_LIST = getFilesFrom(join(__dirname, 'src', 'img'), ['.png', '.jpg']);
+const IMAGE_LIST = getFilesFrom(join(__dirname, 'src', 'img'), ['.png', '.svg', '.jpg'], (name, path) => path.indexOf('no-preload') === -1);
 const JSON_LIST = getFilesFrom(join(__dirname, 'src'), '.json');
 
 const taskHash = {
@@ -39,10 +40,11 @@ const vendorName = 'vendors.js';
 const bundleName = 'bundle.js';
 const templatesName = 'templates.js';
 const cssName = `${pack.name}-styles-${pack.version}.css`;
+const vendorCssName = `${pack.name}-vendor-styles-${pack.version}.css`; //TODO need drop cache?
 const vendorPath = join(tmpJsPath, vendorName);
 const bundlePath = join(tmpJsPath, bundleName);
 const templatePath = join(tmpJsPath, templatesName);
-const cssPath = join(tmpCssPath, cssName);
+const steelSheetsFiles = {};
 
 const getFileName = (name, type) => {
     const postfix = type === 'min' ? '.min' : '';
@@ -50,16 +52,7 @@ const getFileName = (name, type) => {
 };
 
 
-const indexPromise = readFile(join(__dirname, 'src', 'index.html'), { encoding: 'utf8' });
-
-task('load-trading-view', (done) => {
-    Promise.all(meta.tradingView.files.map((relativePath) => {
-        const url = `${meta.tradingView.domain}/${relativePath}`;
-        return download(url, join(__dirname, 'dist', 'tmp', 'trading-view', relativePath)).then(() => {
-            console.log(`Download "${relativePath}" done`);
-        });
-    })).then(() => done());
-});
+const indexPromise = readFile(join(__dirname, 'src', 'index.hbs'), { encoding: 'utf8' });
 
 ['web', 'desktop'].forEach((buildName: TPlatform) => {
 
@@ -89,16 +82,19 @@ task('load-trading-view', (done) => {
             });
             taskHash.concat.push(`concat-${taskPostfix}`);
 
-            const copyDeps = ['concat-style'];
-            if (buildName === 'desktop') {
-                copyDeps.push('load-trading-view');
-            }
+            const copyDeps = ['concat-style', 'downloadLocales'];
 
             task(`copy-${taskPostfix}`, copyDeps, function (done) {
                     const reg = new RegExp(`(.*?\\${sep}src)`);
                     let forCopy = JSON_LIST.map((path) => {
                         return copy(path, path.replace(reg, `${targetPath}`));
-                    }).concat(copy(join(__dirname, 'src/fonts'), `${targetPath}/fonts`));
+                    }).concat(
+                        copy(join(__dirname, 'src/fonts'), `${targetPath}/fonts`),
+                        meta.exportPageVendors.map(p => copy(join(__dirname, p), join(targetPath, p)))
+                    );
+
+                    forCopy.push(copy(join('dist', 'locale'), join(targetPath, 'locales')));
+                    forCopy.push(copy(join(__dirname, 'tradingview-style'), join(targetPath, 'tradingview-style')));
 
                     if (buildName === 'desktop') {
                         const electronFiles = getFilesFrom(join(__dirname, 'electron'), '.js');
@@ -106,19 +102,20 @@ task('load-trading-view', (done) => {
                             const name = basename(path);
                             forCopy.push(copy(path, join(targetPath, name)));
                         });
-                        forCopy.push(copy(join(__dirname, 'electron', 'icons', 'icon128x128.png'), join(targetPath, 'img', 'icon.png')));
-                        forCopy.push(copy(join(__dirname, 'dist', 'tmp', 'trading-view'), join(targetPath, 'trading-view')));
+                        forCopy.push(copy(join(__dirname, 'electron', 'icons'), join(targetPath, 'img', 'icon.png')));
+                        forCopy.push(copy(join(__dirname, 'electron', 'waves.desktop'), join(targetPath, 'waves.desktop')));
+                        forCopy.push(copy(join(__dirname, 'node_modules', 'i18next', 'dist'), join(targetPath, 'i18next')));
                     }
 
                     Promise.all([
                         Promise.all(meta.copyNodeModules.map((path) => {
-                            return copy(join(__dirname, path), `${targetPath}/${path}`);
+                            return copy(join(__dirname, path), join(targetPath, path));
                         })) as Promise<any>,
                         copy(join(__dirname, 'src/img'), `${targetPath}/img`).then(() => {
                             const images = IMAGE_LIST.map((path) => path.replace(reg, ''));
                             return writeFile(join(targetPath, 'img', 'images-list.json'), JSON.stringify(images));
                         }),
-                        copy(cssPath, join(targetPath, 'css', cssName)),
+                        copy(tmpCssPath, join(targetPath, 'css')),
                         copy('LICENSE', join(`${targetPath}`, 'LICENSE')),
                     ].concat(forCopy)).then(() => {
                         done();
@@ -143,21 +140,30 @@ task('load-trading-view', (done) => {
                     });
                 }
 
-                indexPromise.then((file) => {
+                Promise.all([indexPromise.then(() => {
+
+                    const styles = [{ name: join('/css', vendorCssName), theme: null }];
+
+                    for (const theme of THEMES) {
+                        styles.push({
+                            name: join('/css', `${theme}-${cssName}`), theme
+                        });
+                    }
+
                     return prepareHTML({
                         buildType: type,
                         target: targetPath,
                         connection: configName,
                         scripts: scripts,
-                        styles: [
-                            join(targetPath, 'css', `${pack.name}-styles-${pack.version}.css`)
-                        ],
-                        type: buildName
+                        type: buildName,
+                        styles,
+                        themes: THEMES
                     });
                 }).then((file) => {
-                    console.log('out ' + configName);
-                    outputFile(`${targetPath}/index.html`, file).then(() => done());
-                });
+                    outputFile(`${targetPath}/index.html`, file);
+                }),
+                    prepareExport().then(file => outputFile(`${targetPath}/export.html`, file))
+                ]).then(() => done());
             });
             taskHash.html.push(`html-${taskPostfix}`);
 
@@ -224,20 +230,18 @@ task('up-version-json', function (done) {
 });
 
 task('templates', function () {
-    return gulp.src('src/!(index.html)/**/*.html')
+    return gulp.src(['src/**/*.html', 'src/!(index.hbs)/**/*.hbs'])
         .pipe(htmlmin({ collapseWhitespace: true }))
         .pipe(templateCache({
-            module: 'app.templates',
-            // transformUrl: function (url) {
-            //     return `/${url}`;
-            // }
+            module: 'app.templates'
         }))
         .pipe(gulp.dest(tmpJsPath));
 });
 
 task('concat-style', ['less'], function () {
-    return gulp.src(meta.stylesheets.concat(join(tmpCssPath, 'style.css')))
-        .pipe(concat(cssName))
+    steelSheetsFiles[vendorCssName] = { theme: false };
+    return gulp.src(meta.stylesheets)
+        .pipe(concat(vendorCssName))
         .pipe(gulp.dest(tmpCssPath));
 });
 
@@ -253,8 +257,35 @@ task('concat-develop-vendors', function () {
         .pipe(gulp.dest(tmpJsPath));
 });
 
+task('downloadLocales', ['concat-develop-sources'], function (done) {
+    const path = join(tmpJsPath, bundleName);
+
+    readFile(path, 'utf8').then(file => {
+
+        const modules = file.match(/angular\.module\('app\.?((\w|\.)+?)?',/g)
+            .map(str => str.replace('angular.module(\'', '')
+                .replace('\',', ''));
+
+        modules.push('electron');
+
+        const load = name => {
+            const langs = Object.keys(meta.langList);
+
+            return Promise.all(langs.map(lang => {
+                const url = `https://locize.wvservices.com/30ffe655-de56-4196-b274-5edc3080c724/latest/${lang}/${name}`;
+                const out = join('dist', 'locale', lang, `${name}.json`);
+
+                return download(url, out)
+                    .then(() => console.log(`Module ${lang} ${name} loaded!`))
+                    .catch(() => console.error(`Error load module with name ${name}!`));
+            }));
+        };
+        return Promise.all(modules.map(load))
+    }).then(() => done());
+});
+
 task('clean', function () {
-    execSync('sh scripts/clean.sh');
+    execSync(`sh ${join('scripts', 'clean.sh')}`);
 });
 
 task('eslint', function (done) {
@@ -262,7 +293,11 @@ task('eslint', function (done) {
 });
 
 task('less', function () {
-    execSync(`sh ${join('scripts', 'less.sh')}`);
+    const files = getAllLessFiles().join('\n');
+    for (const theme of THEMES) {
+        execSync(`sh ${join('scripts', `less.sh -t=${theme} -n=${cssName} -f="${files}"`)}`);
+        steelSheetsFiles[cssName] = { theme };
+    }
 });
 
 task('babel', ['concat-develop'], function () {
@@ -331,28 +366,49 @@ task('copy', taskHash.copy);
 task('html', taskHash.html);
 task('zip', taskHash.zip);
 
-task('electron-debug', ['electron-task-list'], function (done) {
-    const root = join(__dirname, 'dist', 'desktop');
+task('electron-debug', function (done) {
+    const root = join(__dirname, 'dist', 'desktop', 'electron-debug');
+    const srcDir = join(__dirname, 'electron');
 
-    const process = function (to: string) {
-        const promise = readdir(join(__dirname, 'electron'))
-            .then((list) => list.filter((name) => name.indexOf('js') !== -1))
-            .then((list) => list.map((name) => copy(join(__dirname, 'electron', name), join(to, name))))
-            .then((list) => Promise.all(list))
-            .then(() => readJSON(join(__dirname, 'dist', 'desktop', 'mainnet', 'normal', 'package.json')))
-            .then((pack) => {
-                pack.server = `localhost:8080`;
-                return writeFile(join(to, 'package.json'), JSON.stringify(pack, null, 4));
-            });
+    const copyItem = name => copy(join(srcDir, name), join(root, name));
+    const makePackageJSON = () => {
+        const targetPackage = Object.create(null);
 
-        return promise;
+        meta.electron.createPackageJSONFields.forEach((name) => {
+            targetPackage[name] = pack[name];
+        });
+
+        Object.assign(targetPackage, meta.electron.defaults);
+        targetPackage.server = 'localhost:8080';
+
+        return writeFile(join(root, 'package.json'), JSON.stringify(targetPackage));
     };
 
+    const excludeTypeScrip = list => list.filter(name => extname(name) !== '.ts');
+    const loadLocales = () => {
+        const list = Object.keys(require(join(__dirname, 'ts-scripts', 'meta.json')).langList);
 
-    const copyTo = join(root, 'electron-debug');
-    process(copyTo)
-        .then(() => done())
-        .catch((e) => console.log(e.stack));
+        return Promise.all(list.map(loadLocale));
+    };
+
+    const loadLocale = lang => {
+        const url = `https://locize.wvservices.com/30ffe655-de56-4196-b274-5edc3080c724/latest/${lang}/electron`;
+        const out = join(root, 'locales', lang, `electron.json`);
+
+        return download(url, out);
+    };
+
+    const copyNodeModules = () => Promise.all(meta.copyNodeModules.map(name => copy(name, join(root, name))));
+    const copyI18next = () => copy(join(__dirname, 'node_modules', 'i18next', 'dist'), join(root, 'i18next'));
+
+    readdir(srcDir)
+        .then(excludeTypeScrip)
+        .then(list => Promise.all(list.map(copyItem)))
+        .then(makePackageJSON)
+        .then(loadLocales)
+        .then(copyNodeModules)
+        .then(copyI18next)
+        .then(() => done());
 });
 
 task('all', [

@@ -28,11 +28,6 @@
                 }), 0);
             }
 
-            searchSymbolsByName(userInput, exchange, symbolType, callback) {
-                console.warn('This method should not be called');
-                setTimeout(() => callback([]), 0);
-            }
-
             resolveSymbol(symbolName, resolve, reject) {
                 if (symbolName.match(/^DEX:/)) {
                     return;
@@ -126,8 +121,7 @@
                 const interval = CandlesService._normalizeInterval(resolution);
 
                 const path = `${WavesApp.network.api}/candles/${amountId}/${priceId}`;
-                return fetch(`${path}?timeStart=${from}&timeEnd=${to}&interval=${interval}`)
-                    .then(utils.onFetch)
+                return ds.fetch(`${path}?timeStart=${from}&timeEnd=${to}&interval=${interval}`)
                     .then((res) => res.candles);
             }
 

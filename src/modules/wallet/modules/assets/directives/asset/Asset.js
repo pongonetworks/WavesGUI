@@ -2,10 +2,9 @@
     'use strict';
 
     /**
-     * @param {GatewayService} gatewayService
      * @return {Asset}
      */
-    const controller = function (gatewayService) {
+    const controller = function () {
 
         class Asset {
 
@@ -14,19 +13,10 @@
                  * @type {IBalanceDetails}
                  */
                 this.balance = null;
-                /**
-                 * @type {boolean}
-                 */
-                this.isDepositSupported = false;
-                /**
-                 * @type {boolean}
-                 */
-                this.isSepaSupported = false;
             }
 
-            $postLink() {
-                this.isDepositSupported = gatewayService.hasSupportOf(this.balance.asset, 'deposit');
-                this.isSepaSupported = gatewayService.hasSupportOf(this.balance.asset, 'sepa');
+            isUnpinned() {
+                return !WavesApp.ALWAYS_PINNED_ASSETS.includes(this.balance.asset.id);
             }
 
         }
@@ -34,12 +24,13 @@
         return new Asset();
     };
 
-    controller.$inject = ['gatewayService', 'waves'];
+    controller.$inject = [];
 
     angular.module('app.wallet.assets').component('wAsset', {
         bindings: {
             balance: '<',
-            onClick: '&'
+            onClick: '&',
+            onUnpinClick: '&'
         },
         templateUrl: 'modules/wallet/modules/assets/directives/asset/asset.html',
         controller

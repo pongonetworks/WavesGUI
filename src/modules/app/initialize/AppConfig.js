@@ -3,6 +3,11 @@
 
     const config = function ($urlRouterProvider, $stateProvider, $locationProvider) {
 
+        const tsUtils = require('ts-utils');
+
+        ds.config.setConfig(WavesApp.network);
+        ds.config.set('remappedAssetNames', WavesApp.remappedAssetNames);
+
         class AppConfig {
 
             constructor() {
@@ -39,7 +44,7 @@
                 };
 
                 i18next
-                    .use(i18nextXHRBackend)
+                    .use(i18nextLocizeBackend)
                     .init({
                         lng: localStorage.getItem('lng') || AppConfig.getUserLang(),
                         debug: !WavesApp.isProduction(),
@@ -74,15 +79,8 @@
                             }
                         },
                         backend: {
-                            loadPath: function (lng, ns) {
-                                lng = lng[0];
-                                ns = ns[0];
-                                const parts = ns.split('.');
-                                const path = (
-                                    parts.length === 1 ? ns : parts.filter((item) => item !== 'app').join('/modules/')
-                                );
-                                return `/modules/${path}/locales/${lng}.json?v=${WavesApp.version}`;
-                            }
+                            loadPath: `/locales/{{lng}}/{{ns}}.json?${WavesApp.version}`,
+                            referenceLng: 'en'
                         }
                     });
 
@@ -97,7 +95,15 @@
                         })
                     });
 
+                    if (WavesApp.isDesktop()) {
+                        transfer('setLanguage', i18next.language);
+                    }
+
                     i18next.on('languageChanged', () => {
+                        if (WavesApp.isDesktop()) {
+                            transfer('setLanguage', i18next.language);
+                        }
+
                         const localeData = WavesApp.getLocaleData().separators;
 
                         BigNumber.config({
@@ -131,7 +137,7 @@
                             const controller = (
                                 (abstract || viewData.noController) ?
                                     undefined :
-                                    AppConfig.getCtrlName(tsUtils.camelCase(item.id))
+                                    AppConfig.getCtrlName(item.get('controller') || tsUtils.camelCase(item.id))
                             );
                             const template = viewData.template;
                             const templateUrl = (

@@ -3,18 +3,32 @@
 
     /**
      * @param {CoinomatService} coinomatService
+     * @param {CoinomatCardService} coinomatCardService
      * @param {CoinomatSepaService} coinomatSepaService
      * @return {GatewayService}
      */
-    const factory = function (coinomatService, coinomatSepaService) {
+    const factory = function (coinomatService, coinomatCardService, coinomatSepaService) {
 
         class GatewayService {
 
             constructor() {
                 this.gateways = [
                     coinomatService,
+                    coinomatCardService,
                     coinomatSepaService
                 ];
+            }
+
+            getCryptocurrencies() {
+                return coinomatService.getAll();
+            }
+
+            getPurchasableWithCards() {
+                return coinomatCardService.getAll();
+            }
+
+            getFiats() {
+                return coinomatSepaService.getAll();
             }
 
             /**
@@ -24,17 +38,65 @@
              */
             getDepositDetails(asset, wavesAddress) {
                 const gateway = this._findGatewayFor(asset, 'deposit');
-                return gateway.getDepositDetails(asset, wavesAddress);
+
+                if (gateway) {
+                    return gateway.getDepositDetails(asset, wavesAddress);
+                }
+
+                return null;
             }
 
             /**
              * @param {Asset} asset
              * @param {string} targetAddress
-             * @return {Promise}
+             * @param {string} [paymentId]
+             * @return {Promise<IGatewayDetails>}
              */
-            getWithdrawDetails(asset, targetAddress) {
+            getWithdrawDetails(asset, targetAddress, paymentId) {
                 const gateway = this._findGatewayFor(asset, 'withdraw');
-                return gateway.getWithdrawDetails(asset, targetAddress);
+                return gateway.getWithdrawDetails(asset, targetAddress, paymentId);
+            }
+
+            /**
+             * @param {Asset} crypto
+             * @param {string} wavesAddress
+             * @return {Promise<object>}
+             */
+            getCardFiatWithLimits(crypto, wavesAddress, fiatList) {
+                const gateway = this._findGatewayFor(crypto, 'card');
+                return gateway.getFiatWithLimits(crypto, wavesAddress, fiatList);
+            }
+
+            /**
+             * @param {Asset} crypto
+             * @param {string} fiat
+             * @param {string} recipientAddress
+             * @param {number} fiatAmount
+             * @return {Promise<number>}
+             */
+            getCardApproximateCryptoAmount(crypto, fiat, recipientAddress, fiatAmount) {
+                const gateway = this._findGatewayFor(crypto, 'card');
+                if (!gateway) {
+                    return Promise.resolve(0);
+                } else {
+                    return gateway.getApproximateCryptoAmount(crypto, fiat, recipientAddress, fiatAmount);
+                }
+            }
+
+            /**
+             * @param {Asset} crypto
+             * @param {string} fiat
+             * @param {string} recipientAddress
+             * @param {number} fiatAmount
+             * @return {string}
+             */
+            getCardBuyLink(crypto, fiat, recipientAddress, fiatAmount) {
+                const gateway = this._findGatewayFor(crypto, 'card');
+                if (!gateway) {
+                    return '';
+                } else {
+                    return gateway.getCardBuyLink(crypto, fiat, recipientAddress, fiatAmount);
+                }
             }
 
             /**
@@ -44,7 +106,12 @@
              */
             getSepaDetails(asset, wavesAddress) {
                 const gateway = this._findGatewayFor(asset, 'sepa');
-                return gateway.getSepaDetails(asset, wavesAddress);
+
+                if (gateway) {
+                    return gateway.getSepaDetails(asset, wavesAddress);
+                }
+
+                return null;
             }
 
             /**
@@ -89,7 +156,7 @@
         return new GatewayService();
     };
 
-    factory.$inject = ['coinomatService', 'coinomatSepaService'];
+    factory.$inject = ['coinomatService', 'coinomatCardService', 'coinomatSepaService'];
 
     angular.module('app.utils').factory('gatewayService', factory);
 })();
@@ -114,4 +181,14 @@
  * @property {boolean} [withdraw]
  * @property {boolean} [sepa]
  * @property {boolean} [card]
+ */
+
+/**
+ * @typedef {object} IGatewayDetails
+ * @property {string} address
+ * @property {string} attachment
+ * @property {BigNumber} exchangeRate
+ * @property {BigNumber} gatewayFee
+ * @property {BigNumber} maximumAmount
+ * @property {BigNumber} minimumAmount
  */

@@ -1,4 +1,5 @@
-@import (reference) '../../../config';
+@import (reference) 'config';
+@import (reference) '../../../app/less/typography';
 
 input[type="checkbox"] {
   box-shadow: none;
@@ -9,9 +10,22 @@ input[type="checkbox"] {
 
 .input-like {
   width: 100%;
-  height: @height-control;
-  padding: @padding-control;
-  font-size: @font-size-control;
+  height: @height-control-big;
+  padding: @padding-control-big;
+  font-size: @font-size-control-big;
+  color: @color-disabled-900;
+  background: @color-white;
+
+  &.blue {
+    background: @color-basic-200;
+  }
+
+  @media screen and (max-width: 768px) {
+    height: @height-control-big-responsive;
+    padding: @padding-control-big-responsive;
+    font-size: @font-size-control-big-responsive;
+  }
+
   text-align: left;
   box-shadow: none;
   appearance: none;
@@ -38,6 +52,12 @@ input[type="checkbox"] {
     }
   }
 
+  &.medium {
+    height: @height-control;
+    padding: @padding-control;
+    font-size: @font-size-control;
+  }
+
   &.small {
     height: @height-control-small;
     padding: @padding-control-small;
@@ -48,15 +68,30 @@ input[type="checkbox"] {
     }
   }
 
-  &.big {
-    height: @height-control-big;
-    padding: @padding-control-big;
-    font-size: @font-size-control-big;
-
-    &::placeholder {
+  @media screen and (min-width: 769px) {
+    &.big {
+      height: @height-control-big;
+      padding: @padding-control-big;
       font-size: @font-size-control-big;
+
+      &::placeholder {
+        font-size: @font-size-control-big;
+      }
     }
   }
+
+  @media screen and (max-width: 768px) {
+    &.big {
+      height: @height-control-big-responsive;
+      padding: @padding-control-big-responsive;
+      font-size: @font-size-control-big-responsive;
+
+      &::placeholder {
+        font-size: @font-size-control-big-responsive;
+      }
+    }
+  }
+
 }
 
 w-input {
@@ -74,6 +109,7 @@ w-input {
         &:focus, &.focus {
           background-color: @color-white;
           color: @color-basic-900;
+          border-color: @color-submit-400;
         }
 
         &.ng-touched {
@@ -85,10 +121,12 @@ w-input {
           }
         }
       }
-    }
-  }
 
-  .w-input-wrap {
+      &.no-validate:focus,
+      &.embed:focus {
+        border: 1px solid @color-submit-400;
+      }
+    }
 
     &::after {
       content: '';
@@ -96,10 +134,33 @@ w-input {
       position: absolute;
       right: 21px;
       top: 50%;
-      transform: translate(0, -50%);
+      transform: translateY(-50%);
       background-size: 100% 100%;
     }
 
+    @media screen and (max-width: 768px) {
+      &::after {
+        top: 14px;
+        transform: translateY(0);
+      }
+    }
+  }
+
+  &[textarea="true"] {
+
+    &.tall textarea {
+      min-height: 150px;
+    }
+
+    &.normal textarea {
+      min-height: 80px;
+    }
+
+    .w-input-wrap {
+      &::after {
+        display: none;
+      }
+    }
   }
 
   &:not(.no-icon) .w-input-wrap {
@@ -133,6 +194,27 @@ w-input {
       height: 11px;
     }
   }
+
+  .byte-validator__help {
+    position: absolute;
+    top: -20px;
+    display: none;
+    right: 0;
+    color: @color-basic-500;
+    .footnote-1();
+  }
+
+  div.focused .byte-validator__help {
+    display: block;
+    color: @color-disabled-500;
+  }
+
+  div.touched.invalid .byte-validator__help,
+  div.focused.invalid .byte-validator__help {
+    display: block;
+    color: @color-error-500;
+  }
+
 }
 
 form.ng-submitted {

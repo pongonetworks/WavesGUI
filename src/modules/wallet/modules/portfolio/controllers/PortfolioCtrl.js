@@ -1,33 +1,45 @@
 (function () {
     'use strict';
 
+    const searchByNameAndId = ($scope, key, list) => {
+        const query = $scope[key];
+        if (!query) {
+            return list;
+        }
+
+        return list.filter((item) => {
+            const name = tsUtils.get({ item }, 'item.asset.name');
+            const id = tsUtils.get({ item }, 'item.asset.id');
+            return String(name).toLowerCase().indexOf(query.toLowerCase()) !== -1 || String(id) === query;
+        });
+    };
+
     /**
      * @param {Base} Base
-     * @param $scope
+     * @param {$rootScope.Scope} $scope
      * @param {Waves} waves
      * @param {app.utils} utils
      * @param {ModalManager} modalManager
      * @param {User} user
      * @param {EventManager} eventManager
-     * @param {Function} createPoll
+     * @param {IPollCreate} createPoll
      * @param {GatewayService} gatewayService
+     * @param {$state} $state
+     * @param {STService} stService
+     * @param {VisibleService} visibleService
      * @return {PortfolioCtrl}
      */
     const controller = function (Base, $scope, waves, utils, modalManager, user,
-                                 eventManager, createPoll, gatewayService) {
+                                 eventManager, createPoll, gatewayService, $state, stService, visibleService) {
 
         class PortfolioCtrl extends Base {
 
             constructor() {
                 super($scope);
                 /**
-                 * @type {Money[]}
-                 */
-                this.portfolioBalances = [];
-                /**
                  * @type {string}
                  */
-                this.mirrorId = null;
+                this.mirrorId = user.getSetting('baseAssetId');
                 /**
                  * @type {Asset}
                  */
@@ -35,22 +47,105 @@
                 /**
                  * @type {string[]}
                  */
-                this.pinnedAssetIdList = null;
+                this.pinned = [];
                 /**
                  * @type {string}
                  */
-                this.wavesId = WavesApp.defaultAssets.WAVES;
+                this.address = user.address;
+                /**
+                 * @type {Array<string>}
+                 */
+                this.spam = [];
+                /**
+                 * @type {PortfolioCtrl.IBalances}
+                 */
+                this.details = null;
+                /**
+                 * @type {Array<PortfolioCtrl.IPortfolioBalanceDetails>}
+                 */
+                this.balanceList = [];
+                /**
+                 * @type {string}
+                 */
+                this.filter = null;
+                /**
+                 * @type {Moment}
+                 */
+                this.chartStartDate = utils.moment().add().day(-7);
+                /**
+                 * @type {boolean}
+                 */
+                this.pending = true;
 
-
-                this.syncSettings({ pinnedAssetIdList: 'pinnedAssetIdList' });
-
-                this.mirrorId = user.getSetting('baseAssetId');
-                waves.node.assets.info(this.mirrorId)
+                waves.node.assets.getAsset(this.mirrorId)
                     .then((mirror) => {
                         this.mirror = mirror;
+                        /**
+                         * @type {Array<SmartTable.IHeaderInfo>}
+                         */
+                        this.tableHeaders = [
+                            {
+                                id: 'name',
+                                title: { literal: 'list.name' },
+                                valuePath: 'item.asset.name',
+                                sort: true,
+                                search: searchByNameAndId,
+                                placeholder: 'portfolio.filter'
+                            },
+                            {
+                                id: 'balance',
+                                title: { literal: 'list.balance' },
+                                valuePath: 'item.available',
+                                sort: true
+                            },
+                            {
+                                id: 'inOrders',
+                                title: { literal: 'list.inOrders' },
+                                valuePath: 'item.inOrders',
+                                sort: true
+                            },
+                            {
+                                id: 'mirror',
+                                title: { literal: 'list.mirror', params: { currency: mirror.displayName } }
+                            },
+                            {
+                                id: 'rate',
+                                title: { literal: 'list.rate', params: { currency: mirror.displayName } }
+                            },
+                            {
+                                id: 'change24',
+                                title: { literal: 'list.change' }
+                            },
+                            {
+                                id: 'controls'
+                            }
+                        ];
+
+                        $scope.$digest();
                     });
 
-                createPoll(this, this._getPortfolio, 'portfolioBalances', 3000, { isBalance: true });
+                this.syncSettings({
+                    pinned: 'pinnedAssetIdList',
+                    spam: 'wallet.portfolio.spam',
+                    filter: 'wallet.portfolio.filter'
+                });
+
+                /**
+                 * @type {Poll}
+                 */
+                this.poll = createPoll(this, this._getPortfolio, 'details', 1000, { isBalance: true, $scope });
+
+                this.poll.ready.then(() => {
+                    this.pending = false;
+                    this.observe('details', this._onChangeDetails);
+                    this.observe('filter', this._onChangeDetails);
+
+                    this._onChangeDetails();
+                });
+
+                this.receive(stService.sort, () => {
+                    visibleService.updateSort();
+                });
             }
 
             /**
@@ -64,7 +159,14 @@
              * @param {Asset} asset
              */
             showSend(asset) {
-                return modalManager.showSendAsset(user, asset || Object.create(null));
+                return modalManager.showSendAsset({ assetId: asset && asset.id });
+            }
+
+            /**
+             * @param {Asset} asset
+             */
+            showReceivePopup(asset) {
+                return modalManager.showReceiveModal(user, asset);
             }
 
             /**
@@ -85,22 +187,59 @@
                 return modalManager.showAddressQrCode(user);
             }
 
-            pinAsset(asset, state) {
-                asset.pinned = state;
+            showBurn(assetId) {
+                return modalManager.showBurnModal(assetId);
+            }
 
-                if (state === true && !this._isPinned(asset.id)) {
-                    const list = this.pinnedAssetIdList.slice();
-                    list.push(asset.id);
-                    this.pinnedAssetIdList = list;
-                } else if (state === false && this._isPinned(asset.id)) {
-                    const list = this.pinnedAssetIdList.slice();
-                    list.splice(this.pinnedAssetIdList.indexOf(asset.id), 1);
-                    this.pinnedAssetIdList = list;
-                }
+            showReissue(assetId) {
+                return modalManager.showReissueModal(assetId);
+            }
+
+            canShowDex(balance) {
+                return balance.isPinned ||
+                    balance.asset.isMyAsset ||
+                    balance.asset.id === WavesApp.defaultAssets.WAVES ||
+                    gatewayService.getPurchasableWithCards()[balance.asset.id] ||
+                    gatewayService.getCryptocurrencies()[balance.asset.id] ||
+                    gatewayService.getFiats()[balance.asset.id];
+            }
+
+            /**
+             * @param {Asset} asset
+             */
+            openDex(asset) {
+                $state.go('main.dex', this.getSrefParams(asset));
+            }
+
+            /**
+             * @param {Asset} asset
+             */
+            getSrefParams(asset) {
+                utils.openDex(asset.id);
+            }
+
+            /**
+             * @param {Asset} asset
+             * @param {boolean} [state]
+             */
+            togglePin(asset, state) {
+                user.togglePinAsset(asset.id, state);
+                this.poll.restart();
+            }
+
+            /**
+             * @param {Asset} asset
+             * @param {boolean} [state]
+             */
+            toggleSpam(asset, state) {
+                user.toggleSpamAsset(asset.id, state);
+                this.poll.restart();
             }
 
             isDepositSupported(asset) {
-                return gatewayService.hasSupportOf(asset, 'deposit');
+                const isWaves = asset.id === WavesApp.defaultAssets.WAVES;
+
+                return gatewayService.hasSupportOf(asset, 'deposit') || isWaves;
             }
 
             isSepaSupported(asset) {
@@ -108,48 +247,88 @@
             }
 
             /**
+             * @private
+             */
+            _onChangeDetails() {
+                const details = this.details;
+                let balanceList;
+
+                switch (this.filter) {
+                    case 'active':
+                        balanceList = details.active.slice();
+                        break;
+                    case 'pinned':
+                        balanceList = details.pinned.slice();
+                        break;
+                    case 'spam':
+                        balanceList = details.spam.slice();
+                        break;
+                    case 'notLiquid':
+                        balanceList = details.notLiquid.slice();
+                        break;
+                    default:
+                        throw new Error('Wrong filter name!');
+                }
+
+                this.balanceList = balanceList;
+            }
+
+            /**
              * @return {Promise<Money[]>}
              * @private
              */
             _getPortfolio() {
-                // TODO : request both userBalances() and balanceList(this.pinnedAssetIdList) @xenohunter
-                // TODO : move pinned assets to top from assets list @tsigel
-                return waves.node.assets.userBalances()
-                    .then(this._checkAssets())
-                    .then((balancesList) => {
-                        return balancesList.map((balance) => {
-                            if (this._isPinned(balance.asset.id)) {
-                                balance.asset.pinned = true;
-                            }
+                /**
+                 * @param {IBalanceDetails} item
+                 * @return {PortfolioCtrl.IPortfolioBalanceDetails}
+                 */
+                const remapBalances = (item) => {
+                    const isPinned = this._isPinned(item.asset.id);
+                    const isSpam = this._isSpam(item.asset.id);
+                    item.asset.isMyAsset = item.asset.sender === user.address;
+                    const isOnScamList = WavesApp.scam[item.asset.id];
 
-                            return balance;
-                        });
+                    return Promise.resolve({
+                        available: item.available,
+                        asset: item.asset,
+                        inOrders: item.inOrders,
+                        isPinned,
+                        isSpam,
+                        isOnScamList
                     });
-            }
-
-            /**
-             * @return {function(*=)}
-             * @private
-             */
-            _checkAssets() {
-                return (assets) => {
-                    return PortfolioCtrl._isEmptyBalance(assets) ?
-                        waves.node.assets.balanceList(this.pinnedAssetIdList) :
-                        assets;
                 };
-            }
 
-            _isPinned(assetId) {
-                return this.pinnedAssetIdList.indexOf(assetId) !== -1;
+                return Promise.all([
+                    waves.node.assets.userBalances().then((list) => Promise.all(list.map(remapBalances)))
+                ]).then(([activeList]) => {
+
+                    const spam = [];
+
+                    for (let i = activeList.length - 1; i >= 0; i--) {
+                        if (activeList[i].isOnScamList || activeList[i].isSpam) {
+                            spam.push(activeList.splice(i, 1)[0]);
+                        }
+                    }
+                    return { active: activeList, spam };
+                });
             }
 
             /**
-             * @param {Array} list
+             * @param assetId
              * @return {boolean}
              * @private
              */
-            static _isEmptyBalance(list) {
-                return list.length === 0;
+            _isPinned(assetId) {
+                return this.pinned.includes(assetId);
+            }
+
+            /**
+             * @param assetId
+             * @return {boolean}
+             * @private
+             */
+            _isSpam(assetId) {
+                return this.spam.includes(assetId);
             }
 
         }
@@ -166,9 +345,33 @@
         'user',
         'eventManager',
         'createPoll',
-        'gatewayService'
+        'gatewayService',
+        '$state',
+        'stService',
+        'visibleService'
     ];
 
     angular.module('app.wallet.portfolio')
         .controller('PortfolioCtrl', controller);
 })();
+
+/**
+ * @name PortfolioCtrl
+ */
+
+/**
+ * @typedef {object} PortfolioCtrl#IPortfolioBalanceDetails
+ * @property {boolean} isPinned
+ * @property {boolean} isSpam
+ * @property {boolean} isOnScamList
+ * @property {Asset} asset
+ * @property {Money} available
+ * @property {Money} inOrders
+ */
+
+/**
+ * @typedef {object} PortfolioCtrl#IBalances
+ * @property {Array<PortfolioCtrl.IPortfolioBalanceDetails>} active
+ * @property {Array<PortfolioCtrl.IPortfolioBalanceDetails>} pinned // TODO when available assets store
+ * @property {Array<PortfolioCtrl.IPortfolioBalanceDetails>} spam
+ */

@@ -2,13 +2,16 @@
 (function () {
     'use strict';
 
+    /* global
+        Mousetrap
+     */
+
     const NOT_SYNC_FIELDS = [
         'changeSetting'
     ];
 
     /**
      * @param {Storage} storage
-     * @param {$q} $q
      * @param {*} $state
      * @param {app.defaultSettings} defaultSettings
      * @param {State} state
@@ -17,9 +20,19 @@
      * @param {TimeLine} timeLine
      * @return {User}
      */
-    const factory = function (storage, $q, $state, defaultSettings, state, UserRouteState, modalManager, timeLine) {
+    const factory = function (storage, $state, defaultSettings, state, UserRouteState, modalManager, timeLine, themes) {
+
+        const tsUtils = require('ts-utils');
 
         class User {
+
+
+            /**
+             * @type {Signal<string>} setting path
+             */
+            get changeSetting() {
+                return this._settings.change;
+            }
 
             constructor() {
                 /**
@@ -27,9 +40,9 @@
                  */
                 this.address = null;
                 /**
-                 * @type {Signal}
+                 * @type {string}
                  */
-                this.changeSetting = null;
+                this.name = null;
                 /**
                  * @type {string}
                  */
@@ -43,10 +56,14 @@
                  */
                 this.settings = Object.create(null);
                 /**
+                 * @type {boolean}
+                 */
+                this.noSaveToStorage = false;
+                /**
                  * @type {DefaultSettings}
                  * @private
                  */
-                this._settings = null;
+                this._settings = defaultSettings.create(Object.create(null));
                 /**
                  * @type {number}
                  */
@@ -55,7 +72,7 @@
                  * @type {Deferred}
                  * @private
                  */
-                this._dfr = $q.defer();
+                this._dfr = $.Deferred();
                 /**
                  * @type {object}
                  * @private
@@ -83,6 +100,16 @@
                 this._fieldsForSave = [];
 
                 this._setObserve();
+                this._settings.change.on(() => this._onChangeSettings());
+
+                Mousetrap.bind(['ctrl+shift+k'], () => this.switchNextTheme());
+            }
+
+            /**
+             * @return {boolean}
+             */
+            isMaster() {
+                return !!this._password;
             }
 
             /**
@@ -91,6 +118,64 @@
              */
             getSetting(name) {
                 return this._settings.get(name);
+            }
+
+            /**
+             * @param {string} assetId
+             * @param {boolean} [state]
+             */
+            togglePinAsset(assetId, state) {
+                this.toggleArrayUserSetting('pinnedAssetIdList', assetId, state);
+                if (this.hasInArrayUserSetting('pinnedAssetIdList', assetId)) {
+                    this.toggleSpamAsset(assetId, false);
+                }
+            }
+
+            /**
+             * @param {string} assetId
+             * @param {boolean} [state]
+             */
+            toggleSpamAsset(assetId, state) {
+                this.toggleArrayUserSetting('wallet.portfolio.spam', assetId, state);
+                if (this.hasInArrayUserSetting('wallet.portfolio.spam', assetId)) {
+                    this.togglePinAsset(assetId, false);
+                }
+            }
+
+            /**
+             * @param {string} path
+             * @param {string|number} value
+             * @param {boolean} [state]
+             * @return {null}
+             */
+            toggleArrayUserSetting(path, value, state) {
+                const list = this.getSetting(path);
+                const index = list.indexOf(value);
+                state = tsUtils.isEmpty(state) ? index === -1 : state;
+
+                if (state && index === -1) {
+                    const newList = list.slice();
+                    newList.push(value);
+                    this.setSetting(path, newList);
+                    return null;
+                }
+
+                if (!state && index !== -1) {
+                    const newList = list.slice();
+                    newList.splice(index, 1);
+                    this.setSetting(path, newList);
+                    return null;
+                }
+            }
+
+            /**
+             * @param {string} path
+             * @param {string} value
+             * @return {boolean}
+             */
+            hasInArrayUserSetting(path, value) {
+                const list = this.getSetting(path);
+                return list.includes(value);
             }
 
             /**
@@ -115,7 +200,7 @@
              * @return {Promise}
              */
             onLogin() {
-                return this._dfr.promise;
+                return this._dfr.promise();
             }
 
             /**
@@ -127,30 +212,42 @@
              */
             login(data) {
                 return this._addUserData(data)
-                    .then(() => analytics.push('User', 'Login'));
+                    .then(() => analytics.push('User', `Login.${WavesApp.type}`));
             }
 
             /**
              * @param {object} data
              * @param {string} data.address
+             * @param {string} data.name
              * @param {string} data.encryptedSeed
              * @param {string} data.publicKey
              * @param {string} data.password
+             * @param {boolean} data.saveToStorage
              * @param {boolean} hasBackup
              * @return Promise
              */
-            create(data, hasBackup) {
+            create(data, hasBackup, restore) {
+                this.noSaveToStorage = !data.saveToStorage;
+
                 return this._addUserData({
+                    api: data.api,
                     address: data.address,
                     password: data.password,
+                    name: data.name,
                     encryptedSeed: data.encryptedSeed,
                     publicKey: data.publicKey,
                     settings: {
                         termsAccepted: false,
                         hasBackup: hasBackup,
-                        lng: i18next.language
+                        lng: i18next.language,
+                        theme: themes.getDefaultTheme(),
+                        candle: 'blue'
                     }
-                }).then(() => analytics.push('User', 'Create'));
+                }).then(() => analytics.push(
+                    'User',
+                    `${restore ? 'Restore' : 'Create'}.${WavesApp.type}`,
+                    document.referrer)
+                );
             }
 
             logout() {
@@ -187,30 +284,10 @@
             }
 
             /**
-             * @return {Promise<Seed>}
-             */
-            getSeed() {
-                return this.onLogin() // TODO Refactor. Author Tsigel at 22/11/2017 09:35
-                    .then(() => {
-                        if (!this._password) {
-                            return modalManager.getSeed();
-                        } else {
-
-                            const encryptionRounds = this._settings.get('encryptionRounds');
-                            const encryptedSeed = this.encryptedSeed;
-                            const password = this._password;
-
-                            const phrase = Waves.Seed.decryptSeedPhrase(encryptedSeed, password, encryptionRounds);
-                            return Waves.Seed.fromExistingPhrase(phrase);
-                        }
-                    });
-            }
-
-            /**
              * @return {Promise}
              */
             getUserList() {
-                return storage.load('userList')
+                return storage.onReady().then(() => storage.load('userList'))
                     .then((list) => {
                         list = list || [];
 
@@ -229,8 +306,37 @@
                     .then((list) => storage.save('userList', list));
             }
 
+            getThemeSettings() {
+                const currentTheme = this.getSetting('theme');
+                return themes.getSettings(currentTheme);
+            }
+
+            changeTheme(theme) {
+                const currentTheme = this.getSetting('theme');
+                const newTheme = themes.changeTheme(theme || this.getSetting('theme'));
+                if (currentTheme !== newTheme) {
+                    this.setSetting('theme', newTheme);
+                }
+                analytics.push('Settings', 'Settings.ChangeTheme', newTheme);
+            }
+
+            changeCandle(name) {
+                const currentTheme = this.getSetting('theme');
+                const current = this.getSetting('candle');
+                themes.setCandleColorsByName(currentTheme, name);
+                if (name !== current) {
+                    this.setSetting('candle', name);
+                }
+            }
+
+            switchNextTheme() {
+                const newTheme = themes.switchNext();
+                this.setSetting('theme', newTheme);
+            }
+
             /**
              * @param {object} data
+             * @param {ISignatureApi} data.api
              * @param {string} data.address
              * @param {string} [data.encryptedSeed]
              * @param {string} [data.publicKey]
@@ -251,12 +357,13 @@
                             }
                         });
                         this.lastLogin = Date.now();
+
                         if (this._settings) {
                             this._settings.change.off();
                         }
+
                         this._settings = defaultSettings.create(this.settings);
                         this._settings.change.on(() => this._onChangeSettings());
-                        this.changeSetting = this._settings.change;
 
                         if (this._settings.get('savePassword')) {
                             this._password = data.password;
@@ -269,19 +376,32 @@
                             return new UserRouteState('main', id, this._settings.get(`${id}.activeState`));
                         });
 
-                        return this._save()
+                        Object.keys(WavesApp.network).forEach((key) => {
+                            ds.config.set(key, this._settings.get(`network.${key}`));
+                        });
+
+                        return ds.app.login(data.address, data.api)
                             .then(() => {
-
-                                state.setMaxSleep(this._settings.get('logoutAfterMin'));
-                                this.receive(state.signals.sleep, (min) => {
-                                    if (min >= this._settings.get('logoutAfterMin')) {
-                                        this.logout();
-                                    }
-                                });
-
+                                this.changeTheme();
+                                this.changeCandle();
+                                this._save();
+                            })
+                            .then(() => {
+                                this._logoutTimer();
                                 this._dfr.resolve();
                             });
                     });
+            }
+
+            /**
+             * @private
+             */
+            _logoutTimer() {
+                this.receive(state.signals.sleep, (min) => {
+                    if (min >= this._settings.get('logoutAfterMin')) {
+                        this.logout();
+                    }
+                });
             }
 
             /**
@@ -337,6 +457,10 @@
              * @private
              */
             _save() {
+                if (this.noSaveToStorage || !this.address) {
+                    return Promise.resolve();
+                }
+
                 return storage.load('userList')
                     .then((list) => {
                         list = list || [];
@@ -383,13 +507,13 @@
 
     factory.$inject = [
         'storage',
-        '$q',
         '$state',
         'defaultSettings',
         'state',
         'UserRouteState',
         'modalManager',
-        'timeLine'
+        'timeLine',
+        'themes'
     ];
 
     angular.module('app').factory('user', factory);

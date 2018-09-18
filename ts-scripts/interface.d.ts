@@ -2,10 +2,15 @@ import { Stream } from 'stream';
 
 export interface IMetaJSON {
     vendors: Array<string>;
+    exportPageVendors: Array<string>;
     stylesheets: Array<string>;
     domain: string;
     copyNodeModules: Array<string>;
+    debugInjections: Array<string>;
     electronScripts: Array<string>;
+    langList: object,
+    betaOrigin: string;
+    targetOrigin: string;
     configurations: {
         testnet: IConfItem;
         mainnet: IConfItem;
@@ -49,7 +54,6 @@ export interface IConfItem {
     node: string;
     coinomat: string;
     matcher: string;
-    datafeed: string;
 }
 
 export type TConnection = 'mainnet' | 'testnet';

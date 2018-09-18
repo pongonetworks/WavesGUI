@@ -1,4 +1,5 @@
-@import (reference) '../../config';
+@import (reference) 'config';
+@import (reference) 'app-icons';
 @import (reference) '../../app/less/typography';
 
 html,
@@ -7,15 +8,43 @@ body {
   height: 100%;
   min-width: 360px;
   overflow: auto;
-  background-color: @color-background-default;
+  color: @color-disabled-900;
+  background-color: @color-basic-100;
+
+  .notifications {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 10000;
+  }
+}
+
+::selection {
+  background: @selection-bg;
+}
+::-moz-selection {
+  background: @selection-bg;
+}
+
+body.welcome,
+body.create,
+body.restore,
+body.tokens,
+body.wallet {
   .scroll();
 }
 
+body.dex,
+body.dex-demo {
+  .scroll-dex();
+}
+
 ui-view[name="main"] {
+  display: block;
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: @color-background-default;
+  background-color: @color-white;
 }
 
 html body .hidden {
@@ -26,14 +55,35 @@ html body .hidden {
   text-align: center;
 }
 
-ui-view[name="main"] {
-  display: block;
-}
-
 a {
   text-decoration: none;
   color: @color-submit-300;
   cursor: pointer;
+}
+
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  border: 1px solid green;
+  -webkit-text-fill-color: @color-disabled-900;
+  -webkit-box-shadow: 0 0 0px 1000px #000 inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.waves-logo {
+  width: 100px;
+  height: 21px;
+  background-image: @waves-logo-icon;
+  background-repeat: no-repeat;
+  display: block;
+  margin: 40px auto 80px auto;
 }
 
 md-input-container {
@@ -48,26 +98,39 @@ md-input-container {
   outline: none;
 }
 
-.empty-block-container {
+w-error-block,
+w-empty-block {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 200px auto;
+  text-align: center;
 
   .icon {
-    background-image: url(/img/icons/null.svg);
+    background-image: @empty-icon;
     background-repeat: no-repeat;
     background-position: center center;
-    width: 50px;
-    height: 52px;
-    margin: 40px 0 30px;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 10px auto;
   }
+}
+
+w-error-block {
+    .icon {
+      background-image: @error-icon;
+    }
 }
 
 .ghost {
   opacity: 0 !important;
+}
+
+.link {
+  .footnote-1();
+  color:@color-submit-300;
+  cursor: pointer;
 }
 
 .no-user-select {
@@ -85,6 +148,10 @@ md-input-container {
 
 .relative {
   position: relative;
+}
+
+.absolute {
+  position: absolute;
 }
 
 w-scroll-box {
@@ -130,21 +197,28 @@ w-scroll-box {
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 355px;
 
   .content {
-    width: calc(~"100% - "@width-left-menu + @padding-main-layout * 2);
-    height: calc(~"100% - "@height-header + @padding-main-layout * 2);
+    width: calc(~"100% - "@width-left-menu);
+    height: calc(~"100% - "@height-header);
+    padding: @padding-main-layout;
     overflow: hidden;
     position: absolute;
-    right: @padding-main-layout;
-    bottom: @padding-main-layout;
+    right: 0;
+    bottom: 0;
   }
+}
 
-  .notifications {
-    position: absolute;
-    right: 10px;
-    bottom: 10px;
-    z-index: 10000;
+.wallet.assets {
+  .main-content .content {
+    width: calc(100% ~'- 70px');
+    height: calc(100% ~'- 70px');
+    padding: @padding-main-layout;
+    overflow-y: auto;
+    top: 70px;
+    right: 0;
+    bottom: 0;
   }
 }
 
@@ -154,6 +228,7 @@ w-scroll-box {
 
 .md-dialog-backdrop:nth-of-type(odd) {
   z-index: 79;
+  opacity: 0.7;
 }
 
 .md-dialog-container:first-child:nth-of-type(even) {
@@ -186,10 +261,10 @@ svg.chart {
     box-shadow: none;
     position: absolute;
     top: 13%;
-    left: 50%;
-    transform: translateX(-50%);
     max-height: 74%;
     width: 540px;
+    background: @color-white;
+    color: @color-disabled-900;
 
     md-dialog-actions {
       display: flex;
@@ -203,7 +278,7 @@ md-toolbar.md-default-theme:not(.md-menu-toolbar),
 md-toolbar:not(.md-menu-toolbar) {
   background-color: @color-white;
   color: @color-black;
-  border-bottom: 1px solid @color-disabled-200;
+  border-bottom: 1px solid @color-basic-200;
 }
 
 .chart-legend {
@@ -212,7 +287,7 @@ md-toolbar:not(.md-menu-toolbar) {
 
   .legend-item {
     display: block;
-    padding: 12px 0;
+    height: 38px;
   }
 
 }
@@ -258,7 +333,7 @@ md-toolbar:not(.md-menu-toolbar) {
 
 .main {
   .main-content {
-    background-color: @color-basic-50;
+    background-color: @app-background;
 
     .header,
     .left-menu {
@@ -278,6 +353,7 @@ md-toolbar:not(.md-menu-toolbar) {
   padding: 12px;
   border: 1px dashed @color-warning-400;
   border-radius: @border-radius;
+  width: 100%;
 }
 
 .hide-selection() {
@@ -289,9 +365,8 @@ md-toolbar:not(.md-menu-toolbar) {
 }
 
 .assets-wrapper {
-  max-height: calc(~'100vh - 140px');
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: 100%;
+  min-height: 210px;
 }
 
 .portfolio-list w-scroll-box {
@@ -328,6 +403,28 @@ md-toolbar:not(.md-menu-toolbar) {
   }
 }
 
+.scroll-dex {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  :hover::-webkit-scrollbar {
+    display: block;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    background: @color-basic-200;
+    box-shadow: inset -1px 0 0px 1px @color-white;
+  }
+
+  ::-webkit-scrollbar-thumb:window-inactive {
+    background: @color-basic-200;
+  }
+}
+
 @media screen and (min-width: 1024px) {
   w-left-menu w-responsive-menu {
     min-height: 270px;
@@ -338,17 +435,17 @@ md-toolbar:not(.md-menu-toolbar) {
 
   body {
 
-    .main-content w-scroll-box {
-      overflow: visible;
+    &.wallet.assets {
+      .main-content .content {
+        top: 0;
+        padding: 10px;
+        width: 100%;
+        height: calc(100% ~'- 50px');
+      }
     }
 
     &.wallet {
       min-width: 100%;
-
-      .content ui-view[name="mainContent"],
-      .content ui-view[name="mainContent"] ui-view[name="content"] {
-        height: auto;
-      }
     }
 
     &.portfolio {
@@ -397,30 +494,26 @@ md-toolbar:not(.md-menu-toolbar) {
       margin-top: 60px;
     }
   }
-
-  .app-loader .loader {
-    zoom: .6;
-    transform-origin: center;
-    transform: translateX(40px) rotate(45deg);
-  }
-
 }
 
-@media screen and (max-width: 767px) {
+@media screen and (max-width: 540px) {
   .md-dialog-container {
     md-dialog {
-      width: calc(100% ~' - 20px');
-      max-width: 540px;
-      min-width: 340px;
-      height: 85vh;
-      max-height: 85vh;
-      left: 50%;
-      top: 50%;
+      width: 100%;
+      max-width: 100%;
+      min-width: 360px;
+      height: 100%;
+      max-height: 100%;
+      left: 0;
+      top: 0;
       transform-origin: center;
-      transform: translateY(-50%) translateX(-50%);
+      transform: translateY(0) translateX(0);
+      border-radius: 0;
 
       md-dialog-content {
         padding: 20px 20px 0;
+        height: 100%;
+        color: @color-disabled-900;
       }
     }
   }

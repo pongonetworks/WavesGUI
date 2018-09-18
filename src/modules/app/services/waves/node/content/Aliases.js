@@ -7,14 +7,10 @@
      */
     const factory = function (BaseNodeComponent) {
 
+        const ds = require('data-service');
         const AVAILABLE_CHARS = '-.0123456789@_abcdefghijklmnopqrstuvwxyz';
 
         class Aliases extends BaseNodeComponent {
-
-            constructor() {
-                super();
-                this.aliases = [];
-            }
 
             /**
              * Get address by alias
@@ -22,7 +18,8 @@
              * @return {Promise<string>}
              */
             getAddress(alias) {
-                return Waves.API.Node.v2.aliases.getAddress(alias).then(({ address }) => address);
+                return ds.api.aliases.getAddressByAlias(alias)
+                    .then(({ address }) => address);
             }
 
             /**
@@ -30,42 +27,13 @@
              * @return {string[]}
              */
             getAliasList() {
-                return this.aliases;
-            }
-
-            /**
-             * Get list of min values fee
-             * @return {Promise<Money[]>}
-             */
-            fee() {
-                return this._feeList('createAlias');
-            }
-
-            /**
-             * Create alias (transaction)
-             * @param {string} alias
-             * @param {string} keyPair
-             * @param {Money} [fee]
-             * @return Promise<ITransaction>
-             */
-            createAlias({ alias, fee, keyPair }) {
-                return this.getFee('createAlias', fee).then((fee) => {
-                    return Waves.API.Node.v1.aliases.createAlias({
-                        fee: fee.toCoins(),
-                        feeAssetId: fee.asset.id,
-                        alias
-                    }, keyPair)
-                        .then(this._pipeTransaction([fee]));
-                });
+                return ds.dataManager.getLastAliases();
             }
 
             validate(alias) {
-                // TODO : replace with waves-api method when it is implemented
                 return alias.length >= 4 &&
                     alias.length <= WavesApp.maxAliasLength &&
-                    alias.split('').some((char) => {
-                        return AVAILABLE_CHARS.indexOf(char) !== -1;
-                    });
+                    alias.split('').every((char) => AVAILABLE_CHARS.includes(char));
             }
 
         }

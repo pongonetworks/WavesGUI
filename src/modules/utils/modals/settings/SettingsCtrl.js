@@ -3,13 +3,15 @@
 
     /**
      * @param Base
-     * @param $scope
+     * @param {$rootScope.Scope} $scope
      * @param {Waves} waves
      * @param {User} user
-     * @param {Function} createPoll
+     * @param {IPollCreate} createPoll
+     * @param {*} $templateRequest
+     * @param {app.utils} utils
      * @return {SettingsCtrl}
      */
-    const controller = function (Base, $scope, waves, user, createPoll) {
+    const controller = function (Base, $scope, waves, user, createPoll, $templateRequest, utils) {
 
         class SettingsCtrl extends Base {
 
@@ -22,7 +24,17 @@
                 this.shownKey = false;
                 this.node = '';
                 this.matcher = '';
+                this.scamListUrl = '';
+                this.withScam = false;
+                this.theme = user.getSetting('theme');
+                this.candle = user.getSetting('candle');
                 this.shareStat = user.getSetting('shareAnalytics');
+                this.templatePromise = $templateRequest('modules/utils/modals/settings/loader.html');
+
+                /**
+                 * @type {number}
+                 */
+                this.logoutAfterMin = null;
 
                 this.appName = WavesApp.name;
                 this.appVersion = WavesApp.version;
@@ -32,13 +44,42 @@
 
                 this.syncSettings({
                     node: 'network.node',
-                    matcher: 'network.matcher'
+                    matcher: 'network.matcher',
+                    logoutAfterMin: 'logoutAfterMin',
+                    scamListUrl: 'scamListUrl',
+                    withScam: 'withScam',
+                    theme: 'theme',
+                    candle: 'candle'
+                });
+
+                this.observe('theme', () => {
+                    this.templatePromise.then(
+                        (template) => {
+                            template = template.replace('{{bgColor}}', user.getThemeSettings().bgColor);
+                            this.showLoader(template);
+                            utils.wait(1000).then(() => user.changeTheme(this.theme));
+                        },
+                        () => user.changeTheme(this.theme)
+                    );
+                });
+
+                // this.observe('candle', () => {
+                //     user.changeCandle(this.candle);
+                // });
+
+                this.observe('withScam', () => {
+                    const withScam = this.withScam;
+                    if (withScam) {
+                        waves.node.assets.giveMyScamBack();
+                    } else {
+                        waves.node.assets.stopScam();
+                    }
                 });
 
                 this.observe(['node', 'matcher'], () => {
-                    Waves.config.set({
-                        nodeAddress: this.node,
-                        matcherAddress: this.matcher
+                    ds.config.setConfig({
+                        node: this.node,
+                        matcher: this.matcher
                     });
                 });
 
@@ -53,32 +94,47 @@
                 });
 
                 this.observe('shownSeed', () => {
-                    analytics.push('Settings', 'Settings.ShowSeed');
+                    analytics.push('Settings', `Settings.ShowSeed.${WavesApp.type}`);
                 });
 
                 this.observe('shownKey', () => {
-                    analytics.push('Settings', 'Settings.ShowKeyPair');
+                    analytics.push('Settings', `Settings.ShowKeyPair.${WavesApp.type}`);
                 });
 
                 createPoll(this, waves.node.height, (height) => {
                     this.blockHeight = height;
-                    $scope.$apply();
+                    $scope.$digest();
                 }, 5000);
 
-                user.getSeed().then((seed) => {
-                    this.phrase = seed.phrase;
-                    this.privateKey = seed.keyPair.privateKey;
+                Promise.all([
+                    ds.signature.getSignatureApi().getSeed(),
+                    ds.signature.getSignatureApi().getPrivateKey()
+                ]).then(([seed, key]) => {
+                    this.phrase = seed;
+                    this.privateKey = key;
+                    $scope.$digest();
                 });
             }
 
             onChangeLanguage(language) {
                 user.setSetting('lng', language);
-                analytics.push('Settings', 'Settings.ChangeLanguage', language);
+                analytics.push('Settings', `Settings.ChangeLanguage.${WavesApp.type}`, language);
             }
 
             setNetworkDefault() {
                 this.node = WavesApp.network.node;
                 this.matcher = WavesApp.network.matcher;
+                this.withScam = false;
+                this.scamListUrl = WavesApp.network.scamListUrl;
+            }
+
+            showLoader(template) {
+                const loaderEl = document.createElement('div');
+                loaderEl.innerHTML = template;
+                document.body.appendChild(loaderEl);
+                setTimeout(() => {
+                    document.body.removeChild(loaderEl);
+                }, 4100);
             }
 
         }
@@ -86,7 +142,7 @@
         return new SettingsCtrl();
     };
 
-    controller.$inject = ['Base', '$scope', 'waves', 'user', 'createPoll'];
+    controller.$inject = ['Base', '$scope', 'waves', 'user', 'createPoll', '$templateRequest', 'utils'];
 
     angular.module('app.utils').controller('SettingsCtrl', controller);
 

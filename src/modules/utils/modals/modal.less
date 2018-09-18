@@ -1,10 +1,5 @@
 md-dialog {
 
-  &.md-transition-in,
-  &.md-transition-out {
-    transition: none;
-  }
-
   md-toolbar {
     position: relative;
     padding: 20px 40px;
@@ -50,6 +45,7 @@ md-dialog {
     .asset-data h4 {
       padding-top: 9px;
       margin-bottom: 2px;
+      font-weight: normal;
     }
   }
 }
@@ -57,7 +53,9 @@ md-dialog {
 .asset-content .top-content {
   w-asset-logo {
     margin-right: 20px;
-    float: left
+    float: left;
+    z-index: 1;
+    position: relative;
   }
 
   .pin {
@@ -86,13 +84,17 @@ md-dialog {
   }
 }
 
-@media screen and (max-width: 767px) {
+@media screen and (max-width: 540px) {
   md-dialog {
 
     md-dialog-content {
       &::after {
         min-height: 20px;
       }
+    }
+
+    md-backdrop {
+      display: none;
     }
 
     md-toolbar {

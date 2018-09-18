@@ -3,14 +3,15 @@ import { getType } from 'mime';
 import { exec, spawn } from 'child_process';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join, relative, extname, dirname } from 'path';
-import { ITaskFunction, TBuild, TConnection, TPlatform } from './interface';
+import { IPackageJSON, IMetaJSON, ITaskFunction, TBuild, TConnection, TPlatform } from './interface';
 import { readFile, readJSON, readJSONSync, createWriteStream, mkdirpSync, copy } from 'fs-extra';
 import { compile } from 'handlebars';
 import { transform } from 'babel-core';
 import { render } from 'less';
 import { minify } from 'html-minifier';
-import { get } from 'https';
-
+import { Readable, Writable } from 'stream';
+import { get, ServerResponse, IncomingMessage } from 'https';
+import { MAINNET_DATA, TESTNET_DATA } from '@waves/assets-pairs-order';
 
 export const task: ITaskFunction = gulp.task.bind(gulp) as any;
 
@@ -123,9 +124,13 @@ export function replaceScripts(file: string, paths: Array<string>): string {
     }).join('\n'));
 }
 
-export function replaceStyles(file: string, paths: Array<string>): string {
-    return file.replace('<!-- CSS -->', paths.map((path: string) => {
-        return `<link rel="stylesheet" href="${path}">`;
+export function replaceStyles(file: string, paths: Array<{ theme: string, name: string, hasGet?: boolean }>): string {
+    return file.replace('<!-- CSS -->', paths.map(({ theme, name, hasGet }) => {
+        if (hasGet) {
+            return `<link ${theme ? `theme="${theme}"` : ''} rel="stylesheet" href="${name}?theme=${theme || ''}">`;
+        }
+
+        return `<link ${theme ? `theme="${theme}"` : ''} rel="stylesheet" href="${name}">`;
     }).join('\n'));
 }
 
@@ -133,49 +138,84 @@ export function isTradingView(url: string): boolean {
     return url.indexOf('/trading-view') !== -1;
 }
 
+export function prepareExport(): Promise<string> {
+    return Promise.all([
+        readJSON(join(__dirname, './meta.json')) as Promise<IMetaJSON>,
+        readFile(join(__dirname, '..', 'src', 'export.hbs'), 'utf8') as Promise<string>
+    ])
+        .then(([meta, file]) => {
+            return replaceScripts(compile(file)(meta), meta.exportPageVendors);
+        });
+}
+
+export function getAllLessFiles() {
+    return getFilesFrom(join(__dirname, '../src'), '.less');
+}
+
 export function prepareHTML(param: IPrepareHTMLOptions): Promise<string> {
     const filter = moveTo(param.target);
-
     return Promise.all([
-        readFile(join(__dirname, '../src/index.html'), 'utf8'),
-        readJSON(join(__dirname, '../package.json')),
-        readJSON(join(__dirname, './meta.json'))
+        readFile(join(__dirname, '../src/index.hbs'), 'utf8') as Promise<string>,
+        readJSON(join(__dirname, '../package.json')) as Promise<IPackageJSON>,
+        readJSON(join(__dirname, './meta.json')) as Promise<IMetaJSON>,
+        readJSON(join(__dirname, '../src/themeConfig/theme.json'))
     ])
-        .then((data) => {
-            const [file, pack, meta] = data;
+        .then(([file, pack, meta, themesConf]) => {
+            const { themes } = themesConf;
             const connectionTypes = ['mainnet', 'testnet'];
 
             if (!param.scripts) {
                 const sourceFiles = getFilesFrom(join(__dirname, '../src'), '.js', function (name, path) {
                     return !name.includes('.spec') && !path.includes('/test/');
                 });
+                const cacheKiller = `?v${pack.version}`;
                 param.scripts = meta.vendors.map((i) => join(__dirname, '..', i)).concat(sourceFiles);
-                param.scripts.push(join(__dirname, '../loginDaemon.js'));
+                meta.debugInjections.forEach((path) => {
+                    param.scripts.unshift(join(__dirname, '../', path));
+                });
+                param.scripts = param.scripts.map((path) => `${path}${cacheKiller}`);
             }
 
             if (!param.styles) {
-                param.styles = meta.stylesheets.map((i) => join(__dirname, '..', i)).concat(getFilesFrom(join(__dirname, '../src'), '.less'));
+                const styles = meta.stylesheets.concat(getFilesFrom(join(__dirname, '../src'), '.less'));
+                param.styles = [];
+                for (const style of styles) {
+                    for (const theme of themes) {
+                        const name = filter(style);
+
+                        if (!isLess(style)) {
+                            param.styles.push({ name: `/${name}`, theme: null });
+                            break;
+                        }
+                        param.styles.push({ name: `/${name}`, theme, hasGet: true });
+                    }
+                }
             }
 
-            const networks = connectionTypes.reduce((result, item) => {
-                result[item] = meta.configurations[item];
+            const networks = connectionTypes.reduce((result, connection) => {
+                result[connection] = meta.configurations[connection];
                 return result;
             }, Object.create(null));
 
-            return compile(file)({
+            const fileTpl = compile(file)({
                 pack: pack,
                 isWeb: param.type === 'web',
                 isProduction: param.buildType && param.buildType === 'min',
                 domain: meta.domain,
+                matcherPriorityList: JSON.stringify(param.connection === 'mainnet' ? MAINNET_DATA : TESTNET_DATA, null, 4),
+                betaOrigin: meta.betaOrigin,
+                targetOrigin: meta.targetOrigin,
                 build: {
                     type: param.type
                 },
-                network: networks[param.connection]
+                network: networks[param.connection],
+                themesConf: JSON.stringify(themesConf),
+                langList: JSON.stringify(meta.langList)
             });
+
+            return replaceStyles(fileTpl, param.styles);
         })
         .then((file) => {
-            return replaceStyles(file, param.styles.map(filter).map(s => `/${s}`));
-        }).then((file) => {
             return replaceScripts(file, param.scripts.map(filter));
         });
 }
@@ -220,19 +260,25 @@ export function parseArguments<T>(): T {
 }
 
 export function route(connectionType: TConnection, buildType: TBuild, type: TPlatform) {
-    return function (req, res) {
+    return function (req: IncomingMessage, res: ServerResponse) {
+        const url = req.url.replace(/\?.*/, '');
 
-        if (isTradingView(req.url)) {
-            get(`https://beta.wavesplatform.com/${req.url}`, (resp) => {
-                let data = '';
+        if (isTradingView(url)) {
+            get(`https://client.wavesplatform.com/${url}`, (resp: IncomingMessage) => {
+                let data = new Buffer('');
 
                 // A chunk of data has been recieved.
-                resp.on('data', (chunk) => {
-                    data += chunk;
+                resp.on('data', (chunk: Buffer) => {
+                    data = Buffer.concat([data, chunk]);
                 });
 
                 // The whole response has been received. Print out the result.
                 resp.on('end', () => {
+                    Object.keys(resp.headers).forEach((name) => {
+                        if (name !== 'transfer-encoding' && name !== 'connection' && !res.getHeader(name)) {
+                            res.setHeader(name, resp.headers[name]);
+                        }
+                    });
                     res.end(data);
                 });
             });
@@ -249,34 +295,68 @@ export function route(connectionType: TConnection, buildType: TBuild, type: TPla
             return routeStatic(req, res, connectionType, buildType, type);
         }
 
-        if (req.url.indexOf('/img/images-list.json') !== -1) {
+        if (url.indexOf('/locales') === 0) {
+            const [lang, ns] = url.replace('/locales/', '')
+                .replace(/\?.*/, '')
+                .replace('.json', '')
+                .split('/');
+
+            get(`https://locize.wvservices.com/30ffe655-de56-4196-b274-5edc3080c724/latest/${lang}/${ns}`, (response) => {
+                let data = new Buffer('');
+
+                // A chunk of data has been recieved.
+                response.on('data', (chunk: Buffer) => {
+                    data = Buffer.concat([data, chunk]);
+                });
+                response.on('end', () => {
+                    res.end(data);
+                });
+            });
+            return null;
+        }
+
+        if (url.indexOf('export') !== -1) {
+            prepareExport().then((file) => {
+                res.end(file);
+            });
+            return null;
+        }
+
+        if (url.indexOf('/img/images-list.json') !== -1) {
             res.setHeader('Content-Type', 'application/json');
-            const images = getFilesFrom(join(__dirname, '../src/img'), ['.svg', '.png', '.jpg']).map(moveTo(join(__dirname, '../src')));
+            const images = getFilesFrom(
+                join(__dirname, '../src/img'),
+                ['.svg', '.png', '.jpg'],
+                (name, path) => path.indexOf('no-preload') === -1
+            ).map(moveTo(join(__dirname, '../src')));
             res.end(JSON.stringify(images));
             return null;
         }
 
-        if (isPage(req.url)) {
+        if (isPage(url)) {
             return prepareHTML({
                 target: join(__dirname, '..', 'src'),
                 connection: connectionType,
-                type
+                type,
             }).then((file) => {
                 res.end(file);
             });
-        } else if (isTemplate(req.url)) {
-            readFile(join(__dirname, '../src', req.url), 'utf8')
+        } else if (isTemplate(url)) {
+            readFile(join(__dirname, '../src', url), 'utf8')
                 .then((template) => {
                     const code = minify(template, {
                         collapseWhitespace: true // TODO @xenohunter check html minify options
                     });
                     res.end(code);
                 });
-        } else if (isLess(req.url)) {
-            readFile(join(__dirname, '../src', req.url), 'utf8')
+        } else if (isLess(url)) {
+            const theme = req.url.match(/theme=(.+),?/)[1];
+
+            readFile(join(__dirname, '../src', url), 'utf8')
                 .then((style) => {
                     (render as any)(style, {
-                        filename: join(__dirname, '../src', req.url)
+                        filename: join(__dirname, '../src', url),
+                        paths: join(__dirname, `../src/themeConfig/${theme}`)
                     } as any)
                         .then(function (out) {
                             res.setHeader('Content-type', 'text/css');
@@ -284,13 +364,13 @@ export function route(connectionType: TConnection, buildType: TBuild, type: TPla
                         })
                         .catch((e) => {
                             console.error(e.message);
-                            console.error(req.url);
+                            console.error(url);
                             res.statusCode = 500;
                             res.end(e.message);
                         });
                 });
-        } else if (isSourceScript(req.url)) {
-            readFile(join(__dirname, '../src', req.url), 'utf8')
+        } else if (isSourceScript(url)) {
+            readFile(join(__dirname, '../src', url), 'utf8')
                 .then((code) => {
                     const result = transform(code, {
                         presets: ['es2015'],
@@ -305,9 +385,9 @@ export function route(connectionType: TConnection, buildType: TBuild, type: TPla
                 })
                 .then((code) => res.end(code))
                 .catch((e) => {
-                    console.log(e.message, req.url);
+                    console.log(e.message, url);
                 });
-        } else if (isApiMock(req.url)) {
+        } else if (isApiMock(url)) {
             mock(req, res, { connection: connectionType, meta: readJSONSync(join(__dirname, 'meta.json')) });
         } else {
             routeStatic(req, res, connectionType, buildType, type);
@@ -372,7 +452,10 @@ export function isSourceScript(url: string): boolean {
 }
 
 export function isLess(url: string): boolean {
-    return url.includes('/modules/') && url.lastIndexOf('.less') === url.length - 5;
+    url = url.split('?')[0].replace(/\\/g, '/');
+    return url.lastIndexOf('.less') === url.length - 5 && (
+        url.includes('modules/') || url.includes('/themeConfig/')
+    );
 }
 
 export function isApiMock(url: string): boolean {
@@ -394,10 +477,15 @@ export function isPage(url: string): boolean {
         'js',
         'bower_components',
         'node_modules',
+        'ts-scripts',
         'modules',
+        'themeConfig',
         'locales',
         'loginDaemon',
-        'transfer.js'
+        'transfer.js',
+        'tradingview-style',
+        'data-service-dist',
+        'locale'
     ];
     return !staticPathPartial.some((path) => {
         return url.includes(`/${path}`);
@@ -444,9 +532,10 @@ export interface IPrepareHTMLOptions {
     buildType?: TBuild;
     connection: TConnection;
     scripts?: string[];
-    styles?: string[];
+    styles?: Array<{ name: string, theme: string, hasGet?: boolean }>;
     target: string;
     type: TPlatform;
+    themes?: Array<string>;
 }
 
 export interface IFilter {

@@ -9,10 +9,12 @@
      * @param {Base} Base
      * @param {User} user
      * @param {ModalManager} modalManager
-     * @param {Function} createPoll
+     * @param {IPollCreate} createPoll
      * @return {Assets}
      */
     const controller = function (waves, assetsData, $scope, utils, Base, user, modalManager, createPoll) {
+
+        const tsUtils = require('ts-utils');
 
         class Assets extends Base {
 
@@ -70,6 +72,7 @@
 
                 const hours = tsUtils.date('hh:mm');
                 const dates = tsUtils.date('DD/MM');
+
                 this.options.axes.x.tickFormat = (date) => {
                     if (this.chartMode === 'hour' || this.chartMode === 'day') {
                         return hours(date);
@@ -90,10 +93,14 @@
                 this.mirrorId = user.getSetting('baseAssetId');
                 this._onChangeMode();
 
-                this.updateGraph = createPoll(this, this._getGraphData, 'data', 15000);
+                this.updateGraph = createPoll(this, this._getGraphData, 'data', 15000, { $scope });
 
-                createPoll(this, this._getChartBalances, 'chartBalanceList', 15000, { isBalance: true });
-                const assetPoll = createPoll(this, this._getBalances, 'pinnedAssetBalances', 5000, { isBalance: true });
+                const isBalance = true;
+                createPoll(this, this._getChartBalances, 'chartBalanceList', 15000, { isBalance, $scope });
+                const assetPoll = createPoll(this, this._getBalances, 'pinnedAssetBalances', 5000, {
+                    isBalance,
+                    $scope
+                });
 
                 this.observe('chartMode', this._onChangeMode);
                 this.observe('_startDate', this._onChangeInterval);
@@ -110,22 +117,42 @@
 
             onAssetActionClick(event, asset, action) {
                 event.preventDefault();
-                switch (action) {
-                    case 'send':
-                        this.showSend(asset);
-                        break;
-                    case 'deposit':
-                        this.showDeposit(asset);
-                        break;
-                    case 'sepa':
-                        this.showSepa(asset);
-                        break;
-                    case 'info':
-                        this.showAsset(asset);
-                        break;
-                    default:
-                        throw new Error('Wrong action');
+                if (action === 'send') {
+                    return this.showSend(asset);
                 }
+
+                if (action === 'info') {
+                    return this.showAsset(asset);
+                }
+
+                if (action === 'receive') {
+                    return this.showReceivePopup(asset);
+                }
+
+                throw new Error('Wrong action');
+            }
+
+            /**
+             * @param {Asset} asset
+             */
+            unpin(asset) {
+                this.pinnedAssetIdList = this.pinnedAssetIdList.filter((fAsset) => fAsset !== asset.id);
+            }
+
+            newAssetOnClick() {
+                modalManager.showPinAsset().then(({ selected }) => {
+                    if (selected) {
+                        $scope.$digest();
+                    }
+                });
+            }
+
+            showReceivePopup(asset) {
+                return modalManager.showReceiveModal(user, asset);
+            }
+
+            showSeedBackupModals() {
+                return modalManager.showSeedBackupModal();
             }
 
             /**
@@ -139,7 +166,7 @@
              * @param {Asset} asset
              */
             showSend(asset) {
-                return modalManager.showSendAsset(user, asset || Object.create(null));
+                return modalManager.showSendAsset({ assetId: asset && asset.id || null });
             }
 
             /**
@@ -171,6 +198,10 @@
                     });
             }
 
+            /**
+             * @return {Promise<Money[]>}
+             * @private
+             */
             _getChartBalances() {
                 return waves.node.assets.balanceList(this.chartAssetIdList)
                     .then((list) => list.map(({ available }) => available));
@@ -198,14 +229,23 @@
             _getGraphData() {
                 const from = this.activeChartAssetId;
                 const to = this.mirrorId;
+                const precisionPromise = waves.node.assets.getAsset(this.mirrorId)
+                    .then(({ precision }) => precision);
+                const valuesPromise = waves.utils.getRateHistory(from, to, this._startDate);
 
-                return utils.when(waves.utils.getRateHistory(from, to, this._startDate))
-                    .then((values) => {
+                return Promise.all([precisionPromise, valuesPromise])
+                    .then(([precision, values]) => {
                         const first = values[0].rate;
                         const last = values[values.length - 1].rate;
+                        this.change = (last - first).toFixed(precision);
+                        this.changePercent = ((last - first) / first * 100).toFixed(precision);
 
-                        this.change = (last - first).toFixed(2);
-                        this.changePercent = ((last - first) / first * 100).toFixed(2);
+                        values = values.map((item) => {
+                            return {
+                                ...item,
+                                rate: item.rate.toFixed(precision)
+                            };
+                        });
 
                         return { values };
                     });

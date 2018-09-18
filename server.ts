@@ -14,9 +14,9 @@ const ip = require('my-local-ip')();
 
 const connectionTypes: Array<TConnection> = ['mainnet', 'testnet'];
 const buildTypes: Array<TBuild> = ['dev', 'normal', 'min'];
-
 const privateKey = readFileSync('localhost.key').toString();
 const certificate = readFileSync('localhost.crt').toString();
+
 
 const handler = function (req, res) {
     const url = parse(req.url);
@@ -30,7 +30,7 @@ const handler = function (req, res) {
 
         res.setHeader('Set-Cookie', cookie);
         res.statusCode = 302;
-        res.setHeader('Location', 'https://localhost:8080');
+        res.setHeader('Location', req.headers.referer);
         res.end();
 
         return null;

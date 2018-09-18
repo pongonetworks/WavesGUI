@@ -5,7 +5,7 @@
      * @param {Base} Base
      * @param {JQuery} $element
      * @param {app.utils.mediaStream} mediaStream
-     * @param {Function} createPoll
+     * @param {IPollCreate} createPoll
      * @param {app.utils} utils
      * @return {QrCodeRead}
      */
@@ -44,25 +44,31 @@
                  */
                 this.popupNode = null;
                 /**
-                 * @type {HTMLMediaElement}
-                 */
-                this.video = document.createElement('VIDEO');
-                /**
                  * @type {MediaStream}
                  */
                 this.stream = null;
                 /**
                  * @type {Wrap}
+                 * @type {HTMLMediaElement}
                  */
+                this.video = document.createElement('VIDEO');
+                /**
+                 */
+
                 this.worker = null;
                 /**
                  * @type {Function}
                  */
                 this.onRead = null;
+                /**
+                 * @type {boolean}
+                 */
+                this.webCamError = null;
 
                 this._addVideoAttrs();
                 this.observe(['width', 'height'], this._onChangeSize);
                 this.observe('isWatched', this._onChangeWatched);
+                this.observe('webCamError', this._onChangeVideoError);
             }
 
             $postLink() {
@@ -99,6 +105,7 @@
                 }
 
                 this.isWatched = true;
+                this.webCamError = false;
                 mediaStream.create()
                     .then((stream) => {
                         this.stream = stream;
@@ -108,7 +115,7 @@
                                 this.poll = createPoll(this, this._decodeImage, this._checkStop, 50);
                             });
                         this.video.srcObject = stream.stream;
-                    });
+                    }, () => this._onWebCamError());
             }
 
             /**
@@ -193,8 +200,14 @@
             }
 
             _parseQrCode({ result }) {
-                const [protocol, data] = result.split('://');
-                const [body, search] = data.split('?');
+                let protocol, data;
+                if (result.includes('://')) {
+                    [protocol, data] = result.split('://');
+                } else {
+                    protocol = null;
+                    data = result;
+                }
+                const [body, search] = (data || '').split('?');
                 return { protocol, body, params: utils.parseSearchParams(search) };
             }
 
@@ -240,7 +253,29 @@
             /**
              * @private
              */
+            _onWebCamError() {
+                this._currentSize({ width: this.maxWidth, height: this.maxHeight });
+                this._setPopupPosition();
+                this._addPopupSize();
+                this.webCamError = true;
+            }
+
+            /**
+             * @private
+             */
+            _onChangeVideoError() {
+                if (this.webCamError) {
+                    this.popupNode.classList.add('qr-code-reader-popup__error');
+                } else {
+                    this.popupNode.classList.remove('qr-code-reader-popup__error');
+                }
+            }
+
+            /**
+             * @private
+             */
             _createPopup() {
+                this.errorLiteral = null;
                 this.popupNode = document.createElement('DIV');
                 this.popupNode.classList.add('qr-code-reader-popup');
                 this.popupNode.appendChild(this.video);
