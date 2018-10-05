@@ -8,7 +8,7 @@
     "node_modules/ts-utils/dist/ts-utils.min.js",
     "node_modules/bignumber.js/bignumber.min.js",
     "node_modules/ts-api-validator/dist/ts-api-validator.partial.min.js",
-    "node_modules/waves-api/dist/waves-api.partial.js",
+    "node_modules/@waves/waves-api/dist/waves-api.js",
     "node_modules/jquery/dist/jquery.min.js",
     "node_modules/d3/d3.min.js",
     "node_modules/identity-img/dist/identity-img.min.js",
@@ -126,10 +126,10 @@
   ],
   "configurations": {
     "testnet": {
-      "code": "T",
-      "node": "https://testnodes.wavesnodes.com",
-      "matcher": "https://testnet1.wavesnodes.com/matcher",
-      "api": "http://TODO.com",
+      "code": "L",
+      "node": "https://node.pongo.online",
+      "matcher": "https://node.pongo.online/matcher",
+      "api": "https://node.pongo.online",
       "coinomat": "https://test.coinomat.com",
       "datafeed": "https://marketdata.wavesplatform.com",
       "support": "https://support.wavesplatform.com",
